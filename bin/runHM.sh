@@ -4,25 +4,21 @@
 #                          HANDLE PARAMETERS                          #
 #######################################################################
 
-# input ldsc_input: <getLDSC/collected/input_hm.gz>
-# input rna_infile: <tmp/tss_cell_type_exp.txt.gz>
-# input broad_fine_mapping: <input/broad_fine_mapping.tsv>
-# output hm_done: <done/hm.done>
-# output outdir: <HM>
-
+# fixed parameters
 LDSC_INPUT=""
-ATAC_CELL_TYPES="tmp/ATAC_peaks_per_celltype_wide_sorted_merged.tsv"
-RNA_CELL_TYPES="input/tss_cell_type_exp.txt"
-RNA_INFILE="tmp/tss_cell_type_exp.txt.gz"
-BROAD_FINE_MAPPING="input/broad_fine_mapping.tsv"
+RNA_CELL_TYPES="tss_cell_type_exp.txt"
+RNA_INFILE="tss_cell_type_exp.txt.gz"
+BROAD_FINE_MAPPING="broad_fine_mapping.tsv"
 
-PARAMS=""   # positional arguments: STUDY
-
+# default parameters
+ATAC_CELL_TYPES="ATAC_peaks_per_celltype_wide_sorted_merged.tsv"
 ATAC=""     # include atac data flag
 JOBIND=""   # jobindex (corresponds to cell type)
 OUTDIR="HM" # name of output directory
 NROW=""     # number of rows
 NCELLT=""   # number of cell types
+PARAMS=""   # positional arguments: STUDY
+
 
 while (( "$#" ))
 do
@@ -32,9 +28,15 @@ do
 			shift
 			;;
 		-a|--atac)
-			# covid flag
-			ATAC="--atac"
-			shift
+			# set atac file
+			if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+				ATAC_CELL_TYPES="$2"
+				ATAC=true
+				shift 2
+			else
+				echo "Error: Argument for $1 is missing" >&2
+				exit 1
+			fi
 			;;
 		-j|--jobindex)
 			# set jobindex
@@ -248,7 +250,7 @@ fi
 
 # run_command="/nfs/users/nfs_n/nk5/Project/C/PHM/src/hm -v --ab-feature-level 1.0 100.0 -r $NROW -f $NFE -o $STUDY/$OUTDIR/Out$JOBIND -i $LDSC_INPUT -c $COL2 -j $RNA_INFILE -d $COL"
 
-run_command="/nfs/team205/jp30/projects/code/PHM/src/hm -v --ab-feature-level 1.0 100.0 -r $NROW -f $NFE -o $STUDY/$OUTDIR/Out$JOBIND -i $LDSC_INPUT -c $COL2 -j $RNA_INFILE -d $COL"
+run_command="/nfs/team205/jp30/projects/code/PHM/src/hm -v --ab-feature-level 1.0 100.0 -r $NROW -f $NFE -o Out$JOBIND -i $LDSC_INPUT -c $COL2 -j $RNA_INFILE -d $COL"
 
 echo "$run_command"
 

@@ -1,11 +1,6 @@
 #!/bin/bash
 
-# input gex_infile: <tmp/tss_cell_type_exp.txt.gz>
-# output chunk_out: <getLDSC/chunks/res.gz>
-# params parquet_dir: </lustre/scratch117/cellgen/team205/jp30/ATAC-data-adult-lung-old/Rmarkdown/projects/adult_lung_2021-3/heart_project/parquet_files>
-
-GEX_INFILE="tmp/tss_cell_type_exp.txt.gz"
-CHUNK_OUT_DIR="getLDSC/chunks"
+GEX_INFILE="tss_cell_type_exp.txt.gz"
 
 # The number of genes per job
 NGENE=100
@@ -211,8 +206,8 @@ do
 			print $1":"A-500000"-"$2+500000
 		}'`
 	CHR=${REG%*:*}
-	/software/team170/nk5/vcftools/master/src/getRsq \
-		/nfs/users/nfs_n/nk5/sanger/1000G/20190312/European/chr$CHR.maf0.001.vcf.gz \
+	/lustre/scratch126/cellgen/team205/jp30/software/vcftools/master/src/getRsq \
+		/lustre/scratch126/cellgen/team205/jp30/data/genomics/1000G/20190312/European/chr$CHR.maf0.001.vcf.gz \
 		$REG | awk '
 			BEGIN{OFS="\t"}
 			$6>0.001{
@@ -225,7 +220,7 @@ do
 		# fetch from custom file (must be tabix indexed and contain
 		# columns 'hm_chrom' (1), 'hm_pos' (2+3), 'hm_other_allele' (4), 
 		# 'hm_effect_allele' (5), 'hm_beta' (6) and 'standard_error' (7)
-		/nfs/users/nfs_n/nk5/Applications/htslib/tabix "$CUSTOM_GWAS" \
+		/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix "$CUSTOM_GWAS" \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
 				{
@@ -240,7 +235,7 @@ do
 				}' | gzip > $FGWAS
 	elif [ -z "$IS_COVID" ]; then
 		# fetch from parquet file;  old dir: /lustre/scratch117/cellgen/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet; /warehouse/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet
-		python /nfs/users/nfs_n/nk5/bin/Python/tabix.py \
+		python /lustre/scratch126/cellgen/team205/jp30/software/scripts/tabix.py \
 		       	"$PARQUET_DIR/${GWAS}.parquet" \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
@@ -256,7 +251,7 @@ do
 				}' | gzip > $FGWAS
 	else
 		# process covid
-		/nfs/users/nfs_n/nk5/Applications/htslib/tabix \
+		/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix \
 			/nfs/users/nfs_n/nk5/sanger/GWAS/COVID19/Orig/$GWAS.txt.gz \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
@@ -291,7 +286,7 @@ done | {
 
 			# query tabix indexed ATAC file
 			# and summarise multiple matches
-			/nfs/users/nfs_n/nk5/Applications/htslib/tabix \
+			/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix \
 				$ATAC \
 				$REG | awk -v LINE="$i" -v CELLT="$cellt_init" '
 					BEGIN{FS="\t";OFS="\t";split(CELLT, cell_type_vec, "\t")}
@@ -314,7 +309,7 @@ done | {
 		# if ATAC file not specified, pass input on
 		cat
 	fi
-} | gzip > "$CHUNK_OUT_DIR/res$JOBIND.gz"
+} | gzip > "res$JOBIND.gz"
 
 rm $FLDSC $FGWAS
 
