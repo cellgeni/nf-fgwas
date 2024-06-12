@@ -1,6 +1,4 @@
-params.atac_file = "$projectDir/assets/NO_FILE"
-params.gwas_path = "$projectDir/assets/NO_FILE"
-
+// TODO: publish the results somewhere
 // TODO: binary used in getLDSC.sh: `/lustre/scratch126/cellgen/team205/jp30/software/vcftools/master/src/getRsq`
 //       move and make sure it works on the cluster / inside singularity container
 // TODO: resources used in getLDSC.sh: `/lustre/scratch126/cellgen/team205/jp30/data/genomics/1000G/20190312/European/chr$CHR.maf0.001.vcf.gz`
@@ -8,6 +6,9 @@ params.gwas_path = "$projectDir/assets/NO_FILE"
 // TODO: binary used in getLDSC.sh: `/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix`
 //       and tabix is also used through this script `/lustre/scratch126/cellgen/team205/jp30/software/scripts/tabix.py`
 //       see if can replaced by one version of tabix and move to bin folder / include in environment
+// TODO: binary used in runHM.sh: `/nfs/team205/jp30/projects/code/PHM/src/hm`
+//       move and make sure it works on the cluster / inside singularity container
+
 process run_LDSC {
     input:
     path("tss_cell_type_exp.txt.gz")
@@ -42,8 +43,6 @@ process collect_LDSC {
     """
 }
 
-// TODO: binary used in runHM.sh: `/nfs/team205/jp30/projects/code/PHM/src/hm`
-//       move and make sure it works on the cluster / inside singularity container
 process run_HM {
     input:
     val(study_id)
@@ -71,8 +70,8 @@ process plot_forest {
     path("tss_cell_type_exp.txt.gz")
 
     output:
-    path("forest_plot.pdf")
-    path("enrichment.tsv")
+    path("forest_plot.pdf"), emit: forest_plot
+    path("enrichment.tsv"), emit: enrichment
 
     script:
     """
@@ -81,6 +80,7 @@ process plot_forest {
 }
 
 workflow {
+    main:
     // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
 
     // define the input channels (value channels)
@@ -113,4 +113,17 @@ workflow {
 
     // 4) plot the forest plot
     plot_forest(hm_results, cell_types, tss_file)
+
+    publish:
+    // ----------------- PUBLISH THE RESULTS ----------------- //
+    collected_results.out >> "LDSC_results/"
+    hm_results.out >> "HM_results/"
+    plot_forest.out >> "enrichment/"
+}
+
+output {
+    directory 'results'
+    enabled true
+    mode 'copy'
+    overwrite true
 }
