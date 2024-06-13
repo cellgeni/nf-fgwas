@@ -102,6 +102,21 @@ process plot_forest {
 
 workflow {
     main:
+        // ----------------- CHECK FOR REQUIRED INPUTS ----------------- //
+        if (params.study_id == null) {
+            log.info "Missing study_id '${params.study_id}'"
+            exit 1
+        }
+        if (params.tss_file == null || !file(params.tts_file).exists()) {
+            log.info "Missing or invalid tts_file '${params.tss_file}'"
+            exit 1
+        }
+        if (params.cell_types == null || !file(params.cell_types).exists()) {
+            log.info "Missing or invalid cell_types '${params.cell_types}'"
+            exit 1
+        }
+
+
         // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
 
         // define the input channels (value channels)
