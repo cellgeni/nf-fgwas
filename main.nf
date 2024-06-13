@@ -35,7 +35,7 @@ process run_LDSC {
         def use_atac_file = atac_file.name != "NO_FILE" ? "${atac_file}" : ""
         def use_gwas_path = gwas_path.name != "NO_FILE" ? "--gwas ${atac_file}" : ""
         """
-        bash ${baseDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} --jobindex "${job_index}" --ngene "${gene_chunk_size}"
+        ${projectDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} --jobindex "${job_index}" --ngene "${gene_chunk_size}"
         """
 }
 
@@ -52,7 +52,7 @@ process collect_LDSC {
 
     script:
         """
-        bash ${baseDir}/bin/collect.sh ${result_files} --without-mhc --ngene ${gene_chunk_size}
+        ${projectDir}/bin/collect.sh ${result_files} --without-mhc --ngene ${gene_chunk_size}
         """
 }
 
@@ -76,7 +76,7 @@ process run_HM {
     script:
         def use_atac_file = atac_file.name != "NO_FILE" ? "--atac ${atac_file}" : ""
         """
-        bash ${baseDir}/bin/runHM.sh "${study_id}" ${use_atac_file} --ldscinput input.gz --jobindex "${job_index}"
+        ${projectDir}/bin/runHM.sh "${study_id}" ${use_atac_file} --ldscinput input.gz --jobindex "${job_index}"
         """
 }
 
@@ -96,7 +96,7 @@ process plot_forest {
 
     script:
         """
-        Rscript ${baseDir}/bin/makeForest.R --vanilla ${result_files}
+        ${projectDir}/bin/makeForest.R --vanilla ${result_files}
         """
 }
 
