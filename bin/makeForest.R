@@ -1,6 +1,5 @@
 #!/usr/bin/env Rscript --vanilla
 
-library(optparse)
 library(qvalue)
 
 #######################################################################
@@ -12,6 +11,7 @@ cell_type_file <- "tss_cell_type_exp.txt"
 
 # parse command line arguments
 file_chunks <- commandArgs(trailingOnly = TRUE)
+file_chunks <- file_chunks[!startsWith(file_chunks, "-")]  # remove Rscript options like `--vanilla`
 
 # derive parameters
 cellt_df <- read.table(cell_type_file, sep="\t", header = TRUE, stringsAsFactors = FALSE)
