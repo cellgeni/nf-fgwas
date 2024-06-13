@@ -35,7 +35,7 @@ RUN curl -O -L https:/github.com/samtools/htslib/releases/download/${HTSLIB_VER}
    cd /opt/htslib-${HTSLIB_VER} && \
    ./configure --enable-plugins --with-plugin-path='$(libexecdir)/htslib:/usr/libexec/htslib' && \
    make install && ldconfig
-   
+
 # samtools
 RUN curl -O -L https://github.com/samtools/samtools/releases/download/${HTSLIB_VER}/samtools-${HTSLIB_VER}.tar.bz2 && \
     tar -xjf samtools-${HTSLIB_VER}.tar.bz2 -C /opt && \

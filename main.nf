@@ -19,7 +19,9 @@ process run_LDSC {
         path("tss_cell_type_exp.txt.gz")
         val(study_id)
         path(atac_file)
+        path(atac_file_tbi)
         path(gwas_path)
+        path(gwas_path_tbi)
         val(job_index)
         val(gene_chunk_size)
   
@@ -58,6 +60,7 @@ process run_HM {
     input:
         val(study_id)
         path(atac_file)
+        path(atac_file_tbi)
         path("tss_cell_type_exp.txt")
         path("tss_cell_type_exp.txt.gz")
         path("broad_fine_mapping.tsv")
@@ -104,9 +107,11 @@ workflow {
         // define the input channels (value channels)
         study_id = "${params.study_id}"  // the study ID (either name of a parquet file or a custom ID if gwas_path is provided)
         gwas_path = file("${params.gwas_path}")  // the path to the GWAS file (optional, may be skipped if study_id is the name of a parquet file)
+        gwas_path_tbi = file("${params.gwas_path}.tbi")
         tss_file = file("${params.tss_file}")  // the path to the TSS file (transcription start sites of genes and their expression levels)
         cell_types = file("${params.cell_types}")  // the path to the cell type file; TODO: simplify, the file is only used for the header
         atac_file = file("${params.atac_file}")  // the path to the ATAC file (optional)
+        atac_file_tbi = file("${params.atac_file}.tbi")
         broad_fine_mapping = file("${params.broad_fine_mapping}")  // the path to the broad fine mapping file; TODO: make optional
         gene_chunk_size = "${params.gene_chunk_size}"  // the number of genes to use per chunk / parallel job
 
@@ -126,13 +131,13 @@ workflow {
         // ----------------- RUN THE WORKFLOW ----------------- //
 
         // 1) run LDSC for each chunk of genes
-        ldsc_results = run_LDSC(tss_file, study_id, atac_file, gwas_path, job_indices_ngene, gene_chunk_size)
+        ldsc_results = run_LDSC(tss_file, study_id, atac_file, atac_file_tbi, gwas_path, gwas_path_tbi, job_indices_ngene, gene_chunk_size)
 
         // 2) collect the results of all LDSC runs
         collected_results = collect_LDSC(ldsc_results.collect(), gene_chunk_size)
 
         // 3) run HM on the collected results for all cell types
-        hm_results = run_HM(study_id, atac_file, cell_types, tss_file, broad_fine_mapping, collected_results, job_indices_ncell)
+        hm_results = run_HM(study_id, atac_file, atac_file_tbi, cell_types, tss_file, broad_fine_mapping, collected_results, job_indices_ncell)
 
         // 4) plot the forest plot
         plot_forest(hm_results.collect(), cell_types, tss_file)
