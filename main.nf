@@ -84,12 +84,12 @@ workflow {
     // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
 
     // define the input channels (value channels)
-    tss_file = path("tss_cell_type_exp.txt.gz")  // the path to the TSS file (transcription start sites of genes and their expression levels)
-    cell_types = path("tss_cell_type_exp.txt")  // the path to the cell type file; TODO: simplify, the file is only used for the header
-    broad_fine_mapping = path("broad_fine_mapping.tsv")  // the path to the broad fine mapping file; TODO: make optional
     study_id = Channel.value("${params.study_id}")  // the study ID (either name of a parquet file or a custom ID if gwas_path is provided)
-    atac_file = path("${params.atac_file}")  // the path to the ATAC file (optional)
     gwas_path = path("${params.gwas_path}")  // the path to the GWAS file (optional, may be skipped if study_id is the name of a parquet file)
+    tss_file = path("${params.tss_file}")  // the path to the TSS file (transcription start sites of genes and their expression levels)
+    cell_types = path("${params.cell_types}")  // the path to the cell type file; TODO: simplify, the file is only used for the header
+    atac_file = path("${params.atac_file}")  // the path to the ATAC file (optional)
+    broad_fine_mapping = path("${params.broad_fine_mapping}")  // the path to the broad fine mapping file; TODO: make optional
     gene_chunk_size = Channel.value("${params.gene_chunk_size}")  // the number of genes to use per chunk / parallel job
 
     // derive the job indices for parallel execution (queue channels)
