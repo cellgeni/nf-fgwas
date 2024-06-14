@@ -234,7 +234,7 @@ do
 		/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix "$CUSTOM_GWAS" \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
-				{
+				$7!=0{
 					r=0.1/(0.1+$7*$7);
 					bf=log(1-r)/2+($6/$7)*($6/$7)*r/2
 					if($2-TSS>0){

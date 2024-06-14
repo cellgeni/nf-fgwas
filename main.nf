@@ -103,7 +103,7 @@ workflow {
             log.info "Missing study_id '${params.study_id}'"
             exit 1
         }
-        if (params.tss_file == null || !file(params.tts_file).exists()) {
+        if (params.tss_file == null || !file(params.tss_file).exists()) {
             log.info "Missing or invalid tts_file '${params.tss_file}'"
             exit 1
         }
