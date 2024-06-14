@@ -66,8 +66,10 @@ RUN pip install --no-cache pandas pyarrow
 
 # PHM
 RUN git clone https://github.com/natsuhiko/PHM.git /opt/PHM
+RUN cd /opt/PHM/src && make && make install && ln -s /opt/PHM/bin/hm /opt/PHM/bin/fgwas_hm
+ENV PATH=/opt/PHM/bin:$PATH
 
 # getRsq
 COPY getRsq /opt/ 
 RUN cd /opt/getRsq/src && make
-ENV PATH=/opt/getRsq/bin:$PATH
+ENV PATH=/opt/getRsq/src:$PATH

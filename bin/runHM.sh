@@ -248,9 +248,9 @@ fi
 #  execute command  #
 #####################
 
-# run_command="/nfs/users/nfs_n/nk5/Project/C/PHM/src/hm -v --ab-feature-level 1.0 100.0 -r $NROW -f $NFE -o $STUDY/$OUTDIR/Out$JOBIND -i $LDSC_INPUT -c $COL2 -j $RNA_INFILE -d $COL"
+# run_command=""/nfs/team205/jp30/projects/code/PHM/src/hm -v --ab-feature-level 1.0 100.0 -r $NROW -f $NFE -o $STUDY/$OUTDIR/Out$JOBIND -i $LDSC_INPUT -c $COL2 -j $RNA_INFILE -d $COL"
 
-run_command="/nfs/team205/jp30/projects/code/PHM/src/hm -v --ab-feature-level 1.0 100.0 -r $NROW -f $NFE -o Out$JOBIND -i $LDSC_INPUT -c $COL2 -j $RNA_INFILE -d $COL"
+run_command="fgwas_hm -v --ab-feature-level 1.0 100.0 -r $NROW -f $NFE -o Out$JOBIND -i $LDSC_INPUT -c $COL2 -j $RNA_INFILE -d $COL"
 
 echo "$run_command"
 

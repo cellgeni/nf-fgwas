@@ -217,8 +217,7 @@ do
 			print $1":"A-500000"-"$2+500000
 		}'`
 	CHR=${REG%*:*}
-	/lustre/scratch126/cellgen/team205/jp30/software/get_Rsq/src/getRsq \
-		"${VCF_FILES_DIR}chr$CHR.maf0.001.vcf.gz" \
+	getRsq "${VCF_FILES_DIR}chr$CHR.maf0.001.vcf.gz" \
 		$REG | awk '
 			BEGIN{OFS="\t"}
 			$6>0.001{
@@ -231,7 +230,7 @@ do
 		# fetch from custom file (must be tabix indexed and contain
 		# columns 'hm_chrom' (1), 'hm_pos' (2+3), 'hm_other_allele' (4), 
 		# 'hm_effect_allele' (5), 'hm_beta' (6) and 'standard_error' (7)
-		/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix "$CUSTOM_GWAS" \
+		tabix "$CUSTOM_GWAS" \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
 				$7!=0{
@@ -260,9 +259,8 @@ do
 					print ID,$6,$7,$8,$9,bf,TSSP*(-22.91),$6"_"$7
 				}' | gzip > $FGWAS
 	else
-		# process covid
-		/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix \
-			/nfs/users/nfs_n/nk5/sanger/GWAS/COVID19/Orig/$GWAS.txt.gz \
+		# process covid (not working anymore, path outdated)
+		tabix /nfs/users/nfs_n/nk5/sanger/GWAS/COVID19/Orig/$GWAS.txt.gz \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
 				{
@@ -296,7 +294,7 @@ done | {
 
 			# query tabix indexed ATAC file
 			# and summarise multiple matches
-			/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix \
+			tabix \
 				$ATAC \
 				$REG | awk -v LINE="$i" -v CELLT="$cellt_init" '
 					BEGIN{FS="\t";OFS="\t";split(CELLT, cell_type_vec, "\t")}
