@@ -37,6 +37,7 @@ process run_LDSC {
 
 process collect_LDSC {
     input:
+        path("tss_cell_type_exp.txt.gz")
         path(result_files)
         val(gene_chunk_size)
 
@@ -149,7 +150,7 @@ workflow {
         ldsc_results = run_LDSC(tss_file, study_id, atac_file, atac_file_tbi, gwas_path, gwas_path_tbi, job_indices_ngene, gene_chunk_size)
 
         // 2) collect the results of all LDSC runs
-        collected_results = collect_LDSC(ldsc_results.collect(), gene_chunk_size)
+        collected_results = collect_LDSC(tss_file, ldsc_results.collect(), gene_chunk_size)
 
         // 3) run HM on the collected results for all cell types
         hm_results = run_HM(study_id, atac_file, atac_file_tbi, cell_types, tss_file, broad_fine_mapping, collected_results, job_indices_ncell)

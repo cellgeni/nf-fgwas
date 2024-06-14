@@ -74,6 +74,8 @@ for p in "${FILE_CHUNKS[@]}"
 			}'
 	done | gzip > "$OUTFILE"
 
+zcat "$OUTFILE" | wc | awk '{print $1}'
+
 
 if [ -n "$WOMHC" ]
 then
@@ -81,7 +83,8 @@ then
 	MHCA=`zcat $GEX_INFILE | awk '$1==6&&$2>28510120&&$2<33480577{print NR}' | head -n 1`
 	MHCB=`zcat $GEX_INFILE | awk '$1==6&&$2>28510120&&$2<33480577{print NR}' | tail -n 1`
 
-	zcat "$OUTFILE" | awk -v MHCA=$MHCA -v MHCB=$MHCB '$1<MHCA || $1>MHCB' | gzip > "$OUTFILE"
+	zcat "$OUTFILE" | awk -v MHCA=$MHCA -v MHCB=$MHCB '$1<MHCA || $1>MHCB' | gzip > "$OUTFILE.tmp"
+	mv "$OUTFILE.tmp" "$OUTFILE"
 fi
 
 
