@@ -1,6 +1,7 @@
 #!/bin/bash
 
 GEX_INFILE="tss_cell_type_exp.txt.gz"
+VCF_FILES_DIR="/nfs/cellgeni/pipeline-files/1000G/20190312/European/"
 
 # The number of genes per job
 NGENE=100
@@ -65,9 +66,19 @@ do
 			fi
 			;;
 		-p|--parquetdir)
-			# set jobindex
+			# set dir with parquet files
 			if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
 				PARQUET_DIR="$2"
+				shift 2
+			else
+				echo "Error: Argument for $1 is missing" >&2
+				exit 1
+			fi
+			;;
+		-v|--vcffilesdir)
+			# set dir with vcf files
+			if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+				VCF_FILES_DIR="$2"
 				shift 2
 			else
 				echo "Error: Argument for $1 is missing" >&2
@@ -206,8 +217,8 @@ do
 			print $1":"A-500000"-"$2+500000
 		}'`
 	CHR=${REG%*:*}
-	/lustre/scratch126/cellgen/team205/jp30/software/vcftools/master/src/getRsq \
-		/lustre/scratch126/cellgen/team205/jp30/data/genomics/1000G/20190312/European/chr$CHR.maf0.001.vcf.gz \
+	/lustre/scratch126/cellgen/team205/jp30/software/get_Rsq/src/getRsq \
+		"${VCF_FILES_DIR}chr$CHR.maf0.001.vcf.gz" \
 		$REG | awk '
 			BEGIN{OFS="\t"}
 			$6>0.001{
@@ -235,8 +246,7 @@ do
 				}' | gzip > $FGWAS
 	elif [ -z "$IS_COVID" ]; then
 		# fetch from parquet file;  old dir: /lustre/scratch117/cellgen/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet; /warehouse/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet
-		python /lustre/scratch126/cellgen/team205/jp30/software/scripts/tabix.py \
-		       	"$PARQUET_DIR/${GWAS}.parquet" \
+		python read_parquet.py "$PARQUET_DIR/${GWAS}.parquet" \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
 				NR>1{

@@ -3,14 +3,10 @@
 nextflow.enable.dsl = 2
 nextflow.preview.output = true
 
-// TODO: publish the results somewhere
 // TODO: binary used in getLDSC.sh: `/lustre/scratch126/cellgen/team205/jp30/software/vcftools/master/src/getRsq`
 //       move and make sure it works on the cluster / inside singularity container
-// TODO: resources used in getLDSC.sh: `/lustre/scratch126/cellgen/team205/jp30/data/genomics/1000G/20190312/European/chr$CHR.maf0.001.vcf.gz`
-//       they are large files, move to a permanent location on farm and pass the path as a parameter
 // TODO: binary used in getLDSC.sh: `/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix`
-//       and tabix is also used through this script `/lustre/scratch126/cellgen/team205/jp30/software/scripts/tabix.py`
-//       see if can replaced by one version of tabix and move to bin folder / include in environment
+//       move to bin folder / include in environment
 // TODO: binary used in runHM.sh: `/nfs/team205/jp30/projects/code/PHM/src/hm`
 //       move and make sure it works on the cluster / inside singularity container
 
@@ -35,7 +31,7 @@ process run_LDSC {
         def use_atac_file = atac_file.name != "NO_FILE" ? "${atac_file}" : ""
         def use_gwas_path = gwas_path.name != "NO_FILE" ? "--gwas ${atac_file}" : ""
         """
-        ${projectDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} --jobindex "${job_index}" --ngene "${gene_chunk_size}"
+        ${projectDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} --jobindex "${job_index}" --vcffilesdir "${params.vcf_files_1000G}" --ngene "${gene_chunk_size}"
         """
 }
 
@@ -113,6 +109,10 @@ workflow {
         }
         if (params.cell_types == null || !file(params.cell_types).exists()) {
             log.info "Missing or invalid cell_types '${params.cell_types}'"
+            exit 1
+        }
+        if (!file(params.vcf_files_1000G).exists()) {
+            log.info "directory not found: '${params.vcf_files_1000G}'"
             exit 1
         }
 

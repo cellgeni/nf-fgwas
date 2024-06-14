@@ -61,5 +61,8 @@ RUN curl -L https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | t
     apt-get update && apt-get install -y r-base r-recommended
 RUN Rscript -e 'install.packages(c("qvalue","tidyr","plyr","readr","dplyr","tibble","futile.logger","AnnotationHub"))'
 
+# python packages
+RUN pip install --no-cache pandas pyarrow
+
 # PHM
 RUN git clone https://github.com/natsuhiko/PHM.git /opt/PHM
