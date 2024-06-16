@@ -66,10 +66,26 @@ RUN pip install --no-cache pandas pyarrow
 
 # PHM
 RUN git clone https://github.com/natsuhiko/PHM.git /opt/PHM
+# RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
+#     bash Miniforge3-Linux-x86_64.sh -b -p "${HOME}/conda" && \
+#     source "${HOME}/conda/etc/profile.d/conda.sh" && \
+#     source "${HOME}/conda/etc/profile.d/mamba.sh" && \
+#     mamba activate
+# RUN mamba install -y conda-forge::f2c conda-forge::clapack
+# RUN apt-get install -y f2c
+RUN curl -O -L https://www.netlib.org/clapack/clapack.tgz && \
+    tar zxvf clapack.tgz && \
+    cd CLAPACK-3.2.1 && \
+    mv make.inc.example make.inc && \
+    export CFLAGS="$CFLAGS -fcommon" && \
+    make && \
+    ln -s lapack_LINUX.a liblapack.a && \
+    ln -s tmglib_LINUX.a libtmglib.a && \
+    ln -s blas_LINUX.a libblas.a
 RUN cd /opt/PHM/src && make && make install && ln -s /opt/PHM/bin/hm /opt/PHM/bin/fgwas_hm
 ENV PATH=/opt/PHM/bin:$PATH
 
 # getRsq
-COPY getRsq /opt/ 
+ADD getRsq.tar.gz /opt
 RUN cd /opt/getRsq/src && make
 ENV PATH=/opt/getRsq/src:$PATH
