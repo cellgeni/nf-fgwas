@@ -81,13 +81,6 @@ RUN curl -O -L "http://www.netlib.org/clapack/clapack-${CLAPACK_VER}-CMAKE.tgz" 
 
 # PHM
 RUN git clone https://github.com/natsuhiko/PHM.git /opt/PHM
-# RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
-#     bash Miniforge3-Linux-x86_64.sh -b -p "${HOME}/conda" && \
-#     source "${HOME}/conda/etc/profile.d/conda.sh" && \
-#     source "${HOME}/conda/etc/profile.d/mamba.sh" && \
-#     mamba activate
-# RUN mamba install -y conda-forge::f2c conda-forge::clapack
-# RUN apt-get install -y f2c
 RUN cd /opt/PHM/src && \
     export CFLAGS="$CFLAGS -I/usr/include -I/opt/htslib-${HTSLIB_VER} -I/opt/clapack-${CLAPACK_VER}-CMAKE/INCLUDE -fcommon" && \
     export LDFLAGS="$LDFLAGS -L/usr/lib -L/opt/htslib-${HTSLIB_VER} -L/opt/clapack-${CLAPACK_VER}-CMAKE" && \
@@ -97,6 +90,7 @@ RUN cd /opt/PHM/src && \
 ENV PATH=/opt/PHM/bin:$PATH
 
 # getRsq
-ADD getRsq.tar.gz /opt
+RUN mkdir -p /opt/getRsq/src
+COPY getRsq/src /opt/getRsq/src
 RUN cd /opt/getRsq/src && make
 ENV PATH=/opt/getRsq/src:$PATH
