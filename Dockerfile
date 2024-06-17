@@ -1,5 +1,4 @@
 FROM ubuntu:22.04
-
 LABEL org.opencontainers.image.authors="Patrick Pett <jan.patick.pett@sanger.ac.uk>; Cellular Genetics Informatics <cellgeni@sanger.ac.uk>"
 LABEL org.opencontainers.image.title="Functional GWAS for single cell"
 LABEL org.opencontainers.image.description="Tools for integrating GWAS results with scRNA-seq data to identify disease associated cells"
@@ -9,7 +8,7 @@ LABEL org.opencontainers.image.licenses="MIT"
 
 ENV DEBIAN_FRONTEND=noninteractive
 RUN apt-get update && apt-get install -y \
-        build-essential perl curl git software-properties-common dirmngr pkg-config \
+        build-essential perl curl git cmake software-properties-common dirmngr pkg-config \
         python3 python3-venv python3-pip python-is-python3 \
         libblas-dev liblapack-dev gfortran \
         libbz2-dev libcurl4-openssl-dev libgsl0-dev \
@@ -64,6 +63,22 @@ RUN Rscript -e 'install.packages(c("qvalue","tidyr","plyr","readr","dplyr","tibb
 # python packages
 RUN pip install --no-cache pandas pyarrow
 
+# clapack
+ENV CLAPACK_VER="3.2.1"
+RUN apt-get install -y f2c
+RUN curl -O -L "http://www.netlib.org/clapack/clapack-${CLAPACK_VER}-CMAKE.tgz" && \
+    tar -xzf "clapack-${CLAPACK_VER}-CMAKE.tgz" -C /opt && \
+    rm -rf "clapack-${CLAPACK_VER}-CMAKE.tgz" && \ 
+    cd "/opt/clapack-${CLAPACK_VER}-CMAKE" && \
+    export CFLAGS="$CFLAGS -fcommon" && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make && \
+    ln -s lapack_LINUX.a liblapack.a && \
+    ln -s tmglib_LINUX.a libtmglib.a && \
+    ln -s blas_LINUX.a libblas.a
+
 # PHM
 RUN git clone https://github.com/natsuhiko/PHM.git /opt/PHM
 # RUN curl -L -O "https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh" && \
@@ -73,16 +88,12 @@ RUN git clone https://github.com/natsuhiko/PHM.git /opt/PHM
 #     mamba activate
 # RUN mamba install -y conda-forge::f2c conda-forge::clapack
 # RUN apt-get install -y f2c
-RUN curl -O -L https://www.netlib.org/clapack/clapack.tgz && \
-    tar zxvf clapack.tgz && \
-    cd CLAPACK-3.2.1 && \
-    mv make.inc.example make.inc && \
-    export CFLAGS="$CFLAGS -fcommon" && \
+RUN cd /opt/PHM/src && \
+    export CFLAGS="$CFLAGS -I/usr/include -I/opt/htslib-${HTSLIB_VER} -I/opt/clapack-${CLAPACK_VER}-CMAKE/INCLUDE -fcommon" && \
+    export LDFLAGS="$LDFLAGS -L/usr/lib -L/opt/htslib-${HTSLIB_VER} -L/opt/clapack-${CLAPACK_VER}-CMAKE" && \
     make && \
-    ln -s lapack_LINUX.a liblapack.a && \
-    ln -s tmglib_LINUX.a libtmglib.a && \
-    ln -s blas_LINUX.a libblas.a
-RUN cd /opt/PHM/src && make && make install && ln -s /opt/PHM/bin/hm /opt/PHM/bin/fgwas_hm
+    make install && \
+    ln -s /opt/PHM/bin/hm /opt/PHM/bin/fgwas_hm
 ENV PATH=/opt/PHM/bin:$PATH
 
 # getRsq
