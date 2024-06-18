@@ -5,7 +5,7 @@ VCF_FILES_DIR="/nfs/cellgeni/pipeline-files/1000G/20190312/European/"
 
 # The number of genes per job
 NGENE=100
-PARQUET_DIR=""
+PARQUET_FILE=""
 
 PARAMS=""
 IS_COVID=""
@@ -65,10 +65,10 @@ do
 				exit 1
 			fi
 			;;
-		-p|--parquetdir)
+		-p|--parquetfile)
 			# set dir with parquet files
 			if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
-				PARQUET_DIR="$2"
+				PARQUET_FILE="$2"
 				shift 2
 			else
 				echo "Error: Argument for $1 is missing" >&2
@@ -110,6 +110,7 @@ then
 	exit
 fi
 
+
 # check required params / show help
 if [ -z "$GWAS" ]
 then
@@ -128,6 +129,11 @@ then
 fi
 
 # auto-set
+if [ -z "$PARQUET_FILE" ]
+then
+	PARQUET_FILE="${GWAS}.parquet"
+fi
+
 if [ -z "$IS_COVID" ]
 then
 	if [ -n "$(echo $GWAS | grep COVID)" ]
@@ -245,7 +251,7 @@ do
 				}' | gzip > $FGWAS
 	elif [ -z "$IS_COVID" ]; then
 		# fetch from parquet file;  old dir: /lustre/scratch117/cellgen/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet; /warehouse/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet
-		python read_parquet.py "$PARQUET_DIR/${GWAS}.parquet" \
+		python read_parquet.py "$PARQUET_FILE" \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
 				NR>1{
