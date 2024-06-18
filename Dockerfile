@@ -58,7 +58,8 @@ RUN curl -O -L https://github.com/samtools/bcftools/releases/download/${HTSLIB_V
 RUN curl -L https://cloud.r-project.org/bin/linux/ubuntu/marutter_pubkey.asc | tee -a /etc/apt/trusted.gpg.d/cran_ubuntu_key.asc && \
     add-apt-repository "deb https://cloud.r-project.org/bin/linux/ubuntu $(lsb_release -cs)-cran40/" && \
     apt-get update && apt-get install -y r-base r-recommended
-RUN Rscript -e 'install.packages(c("qvalue","tidyr","plyr","readr","dplyr","tibble","futile.logger","AnnotationHub"))'
+RUN Rscript -e 'install.packages(c("tidyr","plyr","readr","dplyr","tibble","futile.logger","AnnotationHub"))' && \
+    Rscript -e 'if (!require("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install("qvalue")'
 
 # python packages
 RUN pip install --no-cache pandas pyarrow
