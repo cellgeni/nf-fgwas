@@ -3,12 +3,6 @@
 nextflow.enable.dsl = 2
 nextflow.preview.output = true
 
-// TODO: binary used in getLDSC.sh: `/lustre/scratch126/cellgen/team205/jp30/software/vcftools/master/src/getRsq`
-//       move and make sure it works on the cluster / inside singularity container
-// TODO: binary used in getLDSC.sh: `/lustre/scratch126/cellgen/team205/jp30/software/htslib/tabix`
-//       move to bin folder / include in environment
-// TODO: binary used in runHM.sh: `/nfs/team205/jp30/projects/code/PHM/src/hm`
-//       move and make sure it works on the cluster / inside singularity container
 
 process fetch_irods {
     input:
@@ -17,11 +11,12 @@ process fetch_irods {
     output:
         path("${study_id}.parquet"), emit: parquet_file
 
-    script:
-        """
-        archive_path=$(imeta qu -C -z archive otar_study = "${study_id}" | sed 's/collection: //g')
+    shell:
+        '''
+        #!/bin/bash
+        archive_path=$(imeta qu -C -z archive otar_study = "!{study_id}" | sed 's/collection: //g')
         iget -fKvr "${archive_path}" .
-        """
+        '''
 }
 
 process run_LDSC {
@@ -43,9 +38,9 @@ process run_LDSC {
         res >> null
   
     script:
-        def use_atac_file = atac_file.name != "NO_FILE" ? "${atac_file}" : ""
-        def use_gwas_path = gwas_path.name != "NO_FILE" ? "--gwas ${atac_file}" : ""
-        def use_parquet_path = parquet_path.name != "NO_FILE" ? "--parquetfile ${parquet_path}" : ""
+        def use_atac_file = atac_file.name != "NO_ATAC_FILE" ? "${atac_file}" : ""
+        def use_gwas_path = gwas_path.name != "NO_GWAS_FILE" ? "--gwas ${atac_file}" : ""
+        def use_parquet_path = parquet_path.name != "NO_PRQT_FILE" ? "--parquetfile ${parquet_path}" : ""
         """
         ${projectDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} ${use_parquet_path} --jobindex "${job_index}" --vcffilesdir "${params.vcf_files_1000G}" --ngene "${gene_chunk_size}"
         """
@@ -87,7 +82,7 @@ process run_HM {
         res >> "HM_results/"
 
     script:
-        def use_atac_file = atac_file.name != "NO_FILE" ? "--atac ${atac_file}" : ""
+        def use_atac_file = atac_file.name != "NO_ATAC_FILE" ? "--atac ${atac_file}" : ""
         """
         ${projectDir}/bin/runHM.sh "${study_id}" ${use_atac_file} --ldscinput input.gz --jobindex "${job_index}"
         """
@@ -141,6 +136,7 @@ workflow {
         gwas_path = file("${params.gwas_path}")  // the path to the GWAS file (optional, may be skipped if study_id is the name of a parquet file)
         gwas_path_tbi = file("${params.gwas_path}.tbi")
         parquet_path = file("${params.parquet_path}")
+        tss_file = file("${params.tss_file}")  // the path to the file with transcription start sites and mean expression of genes
         cell_types = file("${params.cell_types}")  // the path to the cell type file; TODO: simplify, the file is only used for the header
         atac_file = file("${params.atac_file}")  // the path to the ATAC file (optional)
         atac_file_tbi = file("${params.atac_file}.tbi")
@@ -163,7 +159,7 @@ workflow {
         // ----------------- RUN THE WORKFLOW ----------------- //
 
         // 0) fetch the irods archive
-        if (atac_file.name == "NO_FILE" && parquet_path.name == "NO_FILE") {
+        if (gwas_path.name == "NO_GWAS_FILE" && parquet_path.name == "NO_PRQT_FILE") {
             parquet_path = fetch_irods(study_id)
         }
 
