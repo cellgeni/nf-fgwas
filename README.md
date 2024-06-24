@@ -47,6 +47,7 @@ nextflow -C nextflow.config run /path/to/nf-fgwas/main.nf
 
 - GWAS summary statistics:
   - full summary statistics including SNP position, beta value, standard error
+  - genome build version compatible with the transcription start sites in `tss_cell_type_exp.txt.gz` (e.g. GRCh38)
   - list of files from open targets available on farm: `/warehouse/cellgeni/otar-gwas-ss/gwas/`
   - other summary stats can e.g. be downloaded from EBI GWAS atlas in harmonised format
 
