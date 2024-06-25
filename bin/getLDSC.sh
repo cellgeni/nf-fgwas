@@ -203,15 +203,12 @@ then
 fi
 
 # create temporary files
-FLDSC=`tempfile -s .gz`
-FGWAS=`tempfile -s .gz`
+FLDSC="FLDSC$JOBIND.gz" #$(mktemp --suffix .gz)
+FGWAS="FGWAS$JOBIND.gz" #$(mktemp --suffix .gz)
 
 # loop over chunk
 for I in `seq $A $B`
 do
-	echo $I 1>&2
-	
-	# FLDSC
 	TSS=`zcat $GEX_INFILE | awk -v NROW=$I 'NR==NROW {print $2}'`
 	REG=`zcat $GEX_INFILE | awk -v NROW=$I '
 		NR==NROW {
@@ -223,6 +220,10 @@ do
 			print $1":"A-500000"-"$2+500000
 		}'`
 	CHR=${REG%*:*}
+
+	echo "$I, $TSS, $REG, $CHR" 1>&2
+
+	# FLDSC
 	getRsq "${VCF_FILES_DIR}chr$CHR.maf0.001.vcf.gz" \
 		$REG | awk '
 			BEGIN{OFS="\t"}
@@ -230,7 +231,9 @@ do
 				print $1"_"$2,$3,$4,$5,$6
 			}' | gzip > $FLDSC
 
+	echo "  FLDSC rows: $(wc -l $FLDSC)" 1>&2
 	
+
 	# GWAS
 	if [ -n "$CUSTOM_GWAS" ]; then
 		# fetch from custom file (must be tabix indexed and contain
@@ -239,7 +242,7 @@ do
 		tabix "$CUSTOM_GWAS" \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
-				$7!=0{
+				{
 					r=0.1/(0.1+$7*$7);
 					bf=log(1-r)/2+($6/$7)*($6/$7)*r/2
 					if($2-TSS>0){
@@ -280,6 +283,8 @@ do
 					print ID,$1,$2,$3,$4,bf,TSSP*(-22.91),$1"_"$2
 				}' | gzip > $FGWAS
 	fi
+
+	echo "  FGWAS rows: $(wc -l $FGWAS)" 1>&2
 
 	# join files
 	join -1 8 -2 1 <(zcat $FGWAS | sort -k8,8b) <(zcat $FLDSC | sort -k1,1b) -t $'\t'
@@ -325,6 +330,6 @@ done | {
 	fi
 } | gzip > "res$JOBIND.gz"
 
-rm $FLDSC $FGWAS
+# rm $FLDSC $FGWAS
 
 
