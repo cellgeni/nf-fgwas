@@ -10,12 +10,12 @@ library(qvalue)
 cell_type_file <- "tss_cell_type_exp.txt"
 
 # parse command line arguments
-file_chunks <- commandArgs(trailingOnly = TRUE)
+file_chunks <- stringr::str_sort(commandArgs(trailingOnly = TRUE), numeric = TRUE)
 file_chunks <- file_chunks[!startsWith(file_chunks, "-")]  # remove Rscript options like `--vanilla`
 
 # derive parameters
-cellt_df <- read.table(cell_type_file, sep="\t", header = TRUE, stringsAsFactors = FALSE)
-celltype <- colnames(cellt_df)[4:ncol(cellt_df)]
+cellt_df <- read.table(cell_type_file, sep="\t", header = TRUE, stringsAsFactors = FALSE, check.names = FALSE)
+celltype <- colnames(cellt_df)[3:(ncol(cellt_df) - 1)]
 
 
 # tss=read.table(tss_file, as.is=T)

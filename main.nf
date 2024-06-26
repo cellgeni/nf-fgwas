@@ -39,7 +39,7 @@ process run_LDSC {
   
     script:
         def use_atac_file = atac_file.name != "NO_ATAC_FILE" ? "${atac_file}" : ""
-        def use_gwas_path = gwas_path.name != "NO_GWAS_FILE" ? "--gwas ${atac_file}" : ""
+        def use_gwas_path = gwas_path.name != "NO_GWAS_FILE" ? "--gwas ${gwas_path}" : ""
         def use_parquet_path = parquet_path.name != "NO_PRQT_FILE" ? "--parquetfile ${parquet_path}" : ""
         """
         ${projectDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} ${use_parquet_path} --jobindex "${job_index}" --vcffilesdir "${params.vcf_files_1000G}" --ngene "${gene_chunk_size}"
@@ -148,7 +148,7 @@ workflow {
         ncol = file("${params.cell_types}").withReader{it.readLine().split("\t")}.size()
 
         job_indices_ngene = Channel.from(1..((nrow - 1).intdiv(params.gene_chunk_size) + 1))  // get job indices so that all rows of the tss file are processed in chunks of size gene_chunk_size
-        job_indices_ncell = Channel.from(1..ncol)  // get job indices so that all columns (tab separated) of the tss file are processed one at a time
+        job_indices_ncell = Channel.from(1..(ncol - 3))  // get job indices so that all columns (tab separated) of the tss file are processed one at a time
 
 
         print tss_file
