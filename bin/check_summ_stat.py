@@ -14,6 +14,7 @@ from util import add_logger
 def fix_odds_ratio_to_beta(df, log=logging.getLogger()):
     log.info("setting hm_beta to log-transformed hm_odds_ratio.")
     df["hm_beta"] = np.sign(df["hm_odds_ratio"]) * np.log(np.abs(df["hm_odds_ratio"]))
+    return df
 
 
 @add_logger
@@ -21,18 +22,21 @@ def fix_harmonize_beta(df, log=logging.getLogger()):
     # TODO: better solution?
     log.warning("rename beta to hm_beta. might not be harmonised!")
     df = df.rename(columns={"beta": "hm_beta"})
+    return df
 
 
 @add_logger
 def fix_CI_and_beta_to_SE(df, log=logging.getLogger()):
     log.info("computing standard error from beta and confidence interval.")
     df["standard_error"] = np.abs(np.log(df["hm_ci_upper"]) - np.abs(df["hm_beta"])) / 1.96
+    return df
 
 
 @add_logger
 def fix_pvalue_and_beta_to_SE(df, log=logging.getLogger()):
     log.info("computing standard error from p-value and beta.")
     df["standard_error"] = np.abs(df["hm_beta"] / sp.stats.norm.ppf(df["p-value"] / 2))
+    return df
 
 
 @add_logger
@@ -105,7 +109,7 @@ def fix_summ_stats(df, log=logging.getLogger()):
 
     # apply fixes
     for fix_func in apply_fixes:
-        fix_func(df)
+        df = fix_func(df)
     
     # check if all required columns are present
     if not all(required_columns.values()):
@@ -118,6 +122,31 @@ def fix_summ_stats(df, log=logging.getLogger()):
     else:
         log.info("all done, all required columns are present.")
     
+    return df
+
+
+@add_logger
+def format_summ_stats(df, log=logging.getLogger()):
+    log.info("formatting chromosome and position columns.")
+
+    def try_conv(x):
+        try:
+            y=int(x)
+        except ValueError:
+            y=x
+        return str(y)
+
+    # could be e.g. '10.0' or 'X' or 'NaN'
+    df["hm_chrom"] = [try_conv(x) for x in df["hm_chrom"]]
+    df["hm_pos"] = df.hm_pos.astype("Int64")
+
+    # TODO: reorder columns to: hm_chrom hm_pos hm_pos hm_other_allele hm_effect_allele hm_beta standard_error
+    # TODO: exclude rows with NA values in required columns
+    # TODO: lift over coordinates to GRCh38 if necessary (outside python, e.g. using liftOver from UCSC)
+    # TODO: keep only chromosomes 1-22
+    # TODO: sort by chromosome and position
+    # TODO: compress and tabix index the file (outside python, e.g. using bgzip and tabix from htslib)
+
     return df
 
 
@@ -139,9 +168,10 @@ def main():
 
     # fix the summary statistics
     df_fixed = fix_summ_stats(df)
+    df_fixed = format_summ_stats(df_fixed)
 
     # save the fixed summary statistics
-    df_fixed.to_csv(output_path, sep="\t", index=False)
+    df_fixed.to_csv(output_path, sep="\t", index=False, na_rep="NA")
 
 
 if __name__ == "__main__":
