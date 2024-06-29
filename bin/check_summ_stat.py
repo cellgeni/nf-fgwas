@@ -1,7 +1,8 @@
 #!/usr/bin/env python
 
+import os
 import logging
-from collections import defaultdict
+import tempfile
 from pathlib import Path
 import argparse
 import numpy as np
@@ -126,7 +127,7 @@ def fix_summ_stats(df, log=logging.getLogger()):
 
 
 @add_logger
-def format_summ_stats(df, log=logging.getLogger()):
+def format_summ_stats(df, chain_file=None, log=logging.getLogger()):
     log.info("formatting chromosome and position columns.")
 
     def try_conv(x):
@@ -140,12 +141,27 @@ def format_summ_stats(df, log=logging.getLogger()):
     df["hm_chrom"] = [try_conv(x) for x in df["hm_chrom"]]
     df["hm_pos"] = df.hm_pos.astype("Int64")
 
-    # TODO: reorder columns to: hm_chrom hm_pos hm_pos hm_other_allele hm_effect_allele hm_beta standard_error
-    # TODO: exclude rows with NA values in required columns
+    log.info("reordering columns.")
+    df = df[["hm_chrom", "hm_pos", "hm_pos", "hm_other_allele", "hm_effect_allele", "hm_beta", "standard_error"]]
+
+    log.info("excluding rows with NA values in required columns.")
+    df = df.dropna()
+
     # TODO: lift over coordinates to GRCh38 if necessary (outside python, e.g. using liftOver from UCSC)
-    # TODO: keep only chromosomes 1-22
-    # TODO: sort by chromosome and position
-    # TODO: compress and tabix index the file (outside python, e.g. using bgzip and tabix from htslib)
+    if chain_file is not None:
+        log.info(f"lifting over coordinates using chain file: '{chain_file}'")
+        # save df to temporary file in temporary directory created with tempfile library
+        file_path = tempfile.mktemp()
+        df.to_csv(file_path, sep="\t", index=False, na_rep="NA")
+        
+        os.system(f'CrossMap.py bed "{chain_file}" "{file_path}" "${file_path}_tmp')
+        os.system(f'mv "${file_path}_tmp" "${file_path}"')
+
+    log.info("keeping only chromosomes 1-22.")
+    df = df[df["hm_chrom"].between(1, 22)]
+
+    log.info("sorting by chromosome and position.")
+    df = df.sort_values(["hm_chrom", "hm_pos"])
 
     return df
 
@@ -154,7 +170,8 @@ def main():
     parser = argparse.ArgumentParser(description='Check and fix summary statistics obtained from EBI GWAS catalog.')
 
     parser.add_argument('--input_path', '-i', required=True, help='Path to the TSV file with harmonised summary statistics.')
-    parser.add_argument('--output_path', '-o', default="fixed__{input_file_name}", help='Output file path for the fixed summary statistics (TSV)')
+    parser.add_argument('--output_path', '-o', default="fixed__{input_file_name}", help='Output file path for the fixed summary statistics.')
+    parser.add_argument('--chain_file', default=None, help='Chain file for lifting over coordinates. No lifting over if not provided.')
 
     args = parser.parse_args()
 
@@ -168,10 +185,14 @@ def main():
 
     # fix the summary statistics
     df_fixed = fix_summ_stats(df)
-    df_fixed = format_summ_stats(df_fixed)
+    df_fixed = format_summ_stats(df_fixed, chain_file=args.chain_file)
 
     # save the fixed summary statistics
     df_fixed.to_csv(output_path, sep="\t", index=False, na_rep="NA")
+
+    # compress and index the output file using bgzip and tabix from htslib
+    os.system(f'cat {output_path} | bgzip > "{output_path}.bed.gz"')
+    os.system(f'tabix -p bed "{output_path}.bed.gz"')
 
 
 if __name__ == "__main__":
