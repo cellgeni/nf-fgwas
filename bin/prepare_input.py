@@ -4,13 +4,16 @@
 ### help: `python prepare_input.py -h`
 
 from pathlib import Path
+import logging
 import argparse
 import numpy as np
 import scanpy as sc
 import util
+from util import add_logger
 
 
-def check_adata(adata, scale_thr=0, lognorm_thr=20, filter_thr=10000):
+@add_logger
+def check_adata(adata, scale_thr=0, lognorm_thr=20, filter_thr=10000, log=logging.getLogger()):
     error = None
 
     if scale_thr is not None and adata.X.min() < scale_thr:
@@ -23,23 +26,38 @@ def check_adata(adata, scale_thr=0, lognorm_thr=20, filter_thr=10000):
     if error:
         if adata.raw is not None:
             # retry with raw attribute
+            log.warning(f"AnnData check failed: '{error}'. Retrying with .raw attribute.")
             adata = adata.raw.to_adata()
             adata = check_adata(adata)
         else:
+            log.error(f"AnnData check failed: '{error}' and No .raw attribute found.")
             raise error
         
+    log.info("all checks passed")
     return adata
 
 
-def make_tss_file(h5ad_path, groupby, output_path, output_red_path, host="http://www.ensembl.org"):
+@add_logger
+def make_tss_file(h5ad_path, groupby, output_path=None, host="http://www.ensembl.org", log=logging.getLogger()):
+    # collect parameters
+    if output_path is None:
+        output_path = "tss_cell_type_exp.txt"
+    output_path = Path(output_path)
+    if Path(output_path).is_dir():
+        output_path = Path(output_path) / "tss_cell_type_exp.txt"
+    log.info(f"preparing TSS file...\n  h5ad file: '{h5ad_path}'\n  group by: '{groupby}'\n  output_path: '{output_path}'\n  pybiomart host: '{host}'")
+
     # Load the dataset
+    log.info(f"load h5ad")
     ad = sc.read_h5ad(h5ad_path)
 
     # Check the dataset
+    log.info(f"test and process")
     ad = check_adata(ad)
     sc.pp.filter_genes(ad, min_cells=200)
 
     # Compute the average expression
+    log.info(f"average counts by group '{groupby}'")
     avg_expr_df = util.avg_counts_by_annot(
         ad, 
         groupby, 
@@ -47,6 +65,7 @@ def make_tss_file(h5ad_path, groupby, output_path, output_red_path, host="http:/
     )
 
     # add TSS columns
+    log.info(f"add transcription start site info")
     avg_expr_df = avg_expr_df.rename_axis(index="gene_name").reset_index()
     out_df = util.add_tss_to_df(
         avg_expr_df, 
@@ -56,6 +75,7 @@ def make_tss_file(h5ad_path, groupby, output_path, output_red_path, host="http:/
     )
     
     # Format and filter
+    log.info(f"format TSS table")
     out_df = out_df.drop(columns = "gene_name")
     out_df = out_df[["gene_symbol", "gene_ensembl_id", "chromosome", "tss_loc"] + out_df.columns[4:].tolist()]
     out_df = out_df.astype({"chromosome": int, "tss_loc": int})
@@ -63,16 +83,19 @@ def make_tss_file(h5ad_path, groupby, output_path, output_red_path, host="http:/
     out_df = out_df.sort_values(["chromosome", "tss_loc"])
     out_df = out_df.drop_duplicates(["chromosome", "tss_loc"])
     
-    # Save the output
+    # Save the output with gene names (for reference)
+    output_path_gene_names = Path(output_path).parent / f"gene_names_{Path(output_path).name}"
+    log.info(f"save tss file with gene names and symbols for reference: '{output_path_gene_names}'")
     out_df.columns = util.celltypes_to_ids(out_df.columns)
     out_df.to_csv(
-        Path(output_path).parent / f"gene_names_{Path(output_path).name}", 
+        output_path_gene_names, 
         sep = "\t", 
         index = False,
         float_format='%.15f',
     )
 
-    # Save the reduced output
+    # Save the output
+    log.info(f"save input file for fGWAS: '{output_path}'")
     out_df = out_df.drop(columns = ["gene_symbol", "gene_ensembl_id"])
     out_df.to_csv(
         output_path, 
@@ -125,7 +148,7 @@ def main():
     tss_parser = subparsers.add_parser('tss', help='Make TSS file')
     tss_parser.add_argument('--h5ad_path', '-i', required=True, help='Path to the h5ad file with RNA data (lognorm)')
     tss_parser.add_argument('--groupby', '-g', required=True, help='Group by column name (in AnnData.obs)')
-    tss_parser.add_argument('--output_path', '-o', default="tss_cell_type_exp.txt", help='Output file path (TSV)')
+    tss_parser.add_argument('--output_path', '-o', default="tss_cell_type_exp.txt", help='Output file path (TSV) or folder')
 
     atac_parser = subparsers.add_parser('atac', help='Make ATAC file')
     atac_parser.add_argument('--h5ad_path', '-i', required=True, help='Path to the h5ad file with ATAC data')
@@ -149,4 +172,5 @@ def main():
 
 
 if __name__ == "__main__":
+    logging.basicConfig(level=logging.INFO)
     main()

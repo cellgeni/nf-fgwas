@@ -26,7 +26,7 @@ def add_logger(f):
 
         log.info(f"----- starting {func_name} -----")
         r = f(*args, **kargs, log=log)
-        log.info("----- all done -----")
+        log.info(f"----- {func_name} done -----")
 
         return r
     # edit signature to remove params (PEP-0362)
@@ -134,7 +134,7 @@ def get_tss_df(host=None):
         chromosome = df["Chromosome/scaffold name"].value_counts().index[0]
         gene_symbol = df["Gene name"].value_counts().index[0]
         gene_ensembl_id = df["Gene stable ID"].value_counts().index[0]
-        tss = df["Transcription start site (TSS)"].agg(min if strand > 0 else max)
+        tss = df["Transcription start site (TSS)"].agg('min' if strand > 0 else 'max')
         return pd.DataFrame({
             "chromosome": [chromosome], 
             "tss_loc": [tss],
