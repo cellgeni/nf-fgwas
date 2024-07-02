@@ -3,6 +3,7 @@
 ### usage: `python prepare_input.py {tss,atac} --h5ad_path H5AD_PATH --groupby GROUPBY [--output_path OUTPUT_PATH]`
 ### help: `python prepare_input.py -h`
 
+import os
 from pathlib import Path
 import logging
 import argparse
@@ -155,6 +156,9 @@ def main():
     atac_parser.add_argument('--groupby', '-g', required=True, help='Group by column name (in AnnData.obs)')
     atac_parser.add_argument('--output_path', '-o', default="atac_cell_type_acc.bed", help='Output file path (TSV / BED)')
 
+    atac_parser = subparsers.add_parser('gzip', help='Remove header and gzip file')
+    atac_parser.add_argument('--file', '-i', required=True, help='Path to the file (e.g. output of the tss subcommand)')
+
     args = parser.parse_args()
 
     if args.command == 'tss':
@@ -169,6 +173,8 @@ def main():
             groupby=args.groupby,
             output_path=args.output_path,
         )
+    elif args.command == 'gzip':
+        os.system(f"tail -n +2 {args.file} | gzip > {args.file}.gz")
 
 
 if __name__ == "__main__":
