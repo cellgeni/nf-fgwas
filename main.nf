@@ -116,7 +116,7 @@ workflow {
             exit 1
         }
         if (params.tss_file == null || !file(params.tss_file).exists()) {
-            log.info "Missing or invalid tts_file '${params.tss_file}'"
+            log.info "Missing or invalid tss_file '${params.tss_file}'"
             exit 1
         }
         if (params.cell_types == null || !file(params.cell_types).exists()) {
