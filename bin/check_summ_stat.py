@@ -70,7 +70,7 @@ def fix_summ_stats(df, log=logging.getLogger()):
 
     # check if moving columns is necessary
     for col, to_col in {"hm_beta": "hm_odds_ratio", "beta": "odds_ratio"}.items():
-        if not np.abs(np.nanmean(df[col]) - 0) < 0.4:
+        if col in df and not np.abs(np.nanmean(df[col]) - 0) < 0.4:
             log.error(
                 f"beta values are not centered around 0, "
                 f"deleting the '{col}' column."
@@ -190,7 +190,7 @@ def format_summ_stats(df, chain_file=None, log=logging.getLogger()):
         df = df.sort_values(["hm_chrom", "hm_start"])
         log.debug(df.head())
 
-    except Error as e:
+    except Exception() as e:
         log.info(df.head())
         log.error(e)
         raise e
