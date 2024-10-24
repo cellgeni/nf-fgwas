@@ -24,47 +24,12 @@ process split_studies {
         path(studies)
 
     output:
-        tuple(val(study_id), path(gwas_path), path(parquet_path)), emit: study_data
+        path('output.csv'), emit: study_data
 
-    shell:
-        '''
-        #!/bin/bash
-
-        while IFS="" read -r var || [ -n "$var" ]
-        do
-            if [ -z "$var" ]; then continue; fi
-            if [[ ${var:0:1} != "#" ]]
-            then
-                study=$(echo "$var" | cut -d',' -f1)
-                path=$(echo "$var" | cut -d',' -f2)
-
-                case "$path" in
-                    "$study")
-                        # assuming the study ID can be fetched from iRODS
-                        echo "$study"
-                        echo "$projectDir/assets/NO_GWAS_FILE"
-                        echo "$projectDir/assets/NO_PRQT_FILE"
-                        ;;
-                    *.parquet)
-                        # path to a parquet file given
-                        echo "$study"
-                        echo "$projectDir/assets/NO_GWAS_FILE"
-                        echo "$path"
-                        ;;
-                    *.tsv.gz)
-                        # path to a custom tabix indexed .tsv.gz file given
-                        echo "$study"
-                        echo "$path"
-                        echo "$projectDir/assets/NO_PRQT_FILE"
-                        ;;
-                    *)
-                        echo "Error: Unrecognized file type for study $study with path $path" >&2
-                        exit 1
-                        ;;
-                esac
-            fi  
-        done < <(grep -v "^$" !{studies})
-        '''
+    script:
+        """
+        ${projectDir}/bin/cleanup_inputs.sh "${studies}"
+        """
 }
 
 process run_LDSC {
@@ -160,30 +125,32 @@ process plot_forest {
 
 workflow fgwas {
     take:
-        path tss_file
-        path cell_types
-        path gwas_path
-        path parquet_path
-        path atac_file
-        path broad_fine_mapping
-        val gene_chunk_size
-        val study_id
+        tss_file
+        cell_types
+        gwas_path
+        parquet_path
+        atac_file
+        broad_fine_mapping
+        gene_chunk_size
+        study_id
 
     main:
         // ----------------- CHECK FOR REQUIRED INPUTS ----------------- //
         if (study_id == null) {
-            log.info "Missing study_id '${study_id}'"
+            log.error "Missing study_id '${study_id}'"
             exit 1
         }
         if (tss_file == null || !file(tss_file).exists()) {
-            log.info "Missing or invalid tss_file '${tss_file}'"
+            log.error "Missing or invalid tss_file '${tss_file}'"
             exit 1
         }
         if (cell_types == null || !file(cell_types).exists()) {
-            log.info "Missing or invalid cell_types '${cell_types}'"
+            log.error "Missing or invalid cell_types '${cell_types}'"
             exit 1
         }
 
+        log.debug "study ID: ${study_id}"
+        log.debug "gene chunk size: ${gene_chunk_size}"
 
         // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
 
@@ -192,17 +159,19 @@ workflow fgwas {
 
         // get job indices so that all rows of the tss file are processed in chunks of size gene_chunk_size
         nrow = file("${cell_types}").readLines().size() 
-        job_indices_ngene = Channel.from(1..((nrow - 1).intdiv(gene_chunk_size) + 1))
+        log.info "nrow: ${nrow}"
+        job_indices_ngene = Channel.from(1..((nrow - 1).intdiv(gene_chunk_size.toInteger()) + 1))
 
         // get job indices so that all columns (tab separated) of the tss file are processed one at a time
         ncol = file("${cell_types}").withReader{it.readLine().split("\t")}.size()
+        log.info "ncol: ${ncol}"
         job_indices_ncell = Channel.from(1..(ncol - 3))
 
 
         // ----------------- RUN THE WORKFLOW ----------------- //
 
         // 0) fetch the irods archive
-        if (gwas_path.name == "NO_GWAS_FILE" && parquet_path.name == "NO_PRQT_FILE") {
+        if (file("${gwas_path}").name == "NO_GWAS_FILE" && file("${parquet_path}").name == "NO_PRQT_FILE") {
             parquet_path = fetch_irods(study_id)
         }
 
@@ -224,11 +193,11 @@ workflow {
     main:
         // ----------------- CHECK FOR REQUIRED INPUTS ----------------- //
         if (params.studies == null || !file(params.studies).exists()) {
-            log.info "Missing studies file: '${params.studies}'"
+            log.error "Missing studies file: '${params.studies}'"
             exit 1
         }
         if (!file(params.vcf_files_1000G).exists()) {
-            log.info "directory not found: '${params.vcf_files_1000G}'"
+            log.error "directory not found: '${params.vcf_files_1000G}'"
             exit 1
         }
 
@@ -242,10 +211,10 @@ workflow {
         gene_chunk_size = "${params.gene_chunk_size}"  // the number of genes to use per chunk / parallel job
 
         // split the studies file into individual studies
-        study_data = split_studies(params.studies)
-        study_id = study_data.map{it[0]}
-        gwas_path = study_data.map{it[1]}
-        parquet_path = study_data.map{it[2]}
+        study_data = split_studies(params.studies).splitCsv(header: true)
+        study_id = study_data.map{it.study_id}
+        gwas_path = study_data.map{it.gwas_path}
+        parquet_path = study_data.map{it.parquet_path}
 
         // ----------------- RUN THE WORKFLOW ----------------- //
 
