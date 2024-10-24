@@ -19,6 +19,54 @@ process fetch_irods {
         '''
 }
 
+process split_studies {
+    input:
+        path(studies)
+
+    output:
+        tuple(val(study_id), path(gwas_path), path(parquet_path)), emit: study_data
+
+    shell:
+        '''
+        #!/bin/bash
+
+        while IFS="" read -r var || [ -n "$var" ]
+        do
+            if [ -z "$var" ]; then continue; fi
+            if [[ ${var:0:1} != "#" ]]
+            then
+                study=$(echo "$var" | cut -d',' -f1)
+                path=$(echo "$var" | cut -d',' -f2)
+
+                case "$path" in
+                    "$study")
+                        # assuming the study ID can be fetched from iRODS
+                        echo "$study"
+                        echo "$projectDir/assets/NO_GWAS_FILE"
+                        echo "$projectDir/assets/NO_PRQT_FILE"
+                        ;;
+                    *.parquet)
+                        # path to a parquet file given
+                        echo "$study"
+                        echo "$projectDir/assets/NO_GWAS_FILE"
+                        echo "$path"
+                        ;;
+                    *.tsv.gz)
+                        # path to a custom tabix indexed .tsv.gz file given
+                        echo "$study"
+                        echo "$path"
+                        echo "$projectDir/assets/NO_PRQT_FILE"
+                        ;;
+                    *)
+                        echo "Error: Unrecognized file type for study $study with path $path" >&2
+                        exit 1
+                        ;;
+                esac
+            fi  
+        done < <(grep -v "^$" !{studies})
+        '''
+}
+
 process run_LDSC {
     input:
         path("tss_cell_type_exp.txt.gz")
@@ -48,6 +96,7 @@ process run_LDSC {
 
 process collect_LDSC {
     input:
+        val(study_id)
         path("tss_cell_type_exp.txt.gz")
         path(result_files)
         val(gene_chunk_size)
@@ -56,7 +105,7 @@ process collect_LDSC {
         path("input.gz"), emit: res
 
     publish:
-        res >> "LDSC_results/"
+        res >> "$study_id/LDSC_results/"
 
     script:
         """
@@ -79,7 +128,7 @@ process run_HM {
         path("Out${job_index}"), emit: res
 
     publish:
-        res >> "HM_results/"
+        res >> "$study_id/HM_results/"
 
     script:
         def use_atac_file = atac_file.name != "NO_ATAC_FILE" ? "--atac ${atac_file}" : ""
@@ -90,6 +139,7 @@ process run_HM {
 
 process plot_forest {
     input:
+        val(study_id)
         path(result_files)
         path("tss_cell_type_exp.txt")
         path("tss_cell_type_exp.txt.gz")
@@ -99,8 +149,8 @@ process plot_forest {
         path("enrichment.tsv"), emit: enrichment
 
     publish:
-        forest_plot >> "enrichment/"
-        enrichment >> "enrichment/"
+        forest_plot >> "$study_id/enrichment/"
+        enrichment >> "$study_id/enrichment/"
 
     script:
         """
@@ -108,52 +158,45 @@ process plot_forest {
         """
 }
 
-workflow {
+workflow fgwas {
+    take:
+        path tss_file
+        path cell_types
+        path gwas_path
+        path parquet_path
+        path atac_file
+        path broad_fine_mapping
+        val gene_chunk_size
+        val study_id
+
     main:
         // ----------------- CHECK FOR REQUIRED INPUTS ----------------- //
-        if (params.study_id == null) {
-            log.info "Missing study_id '${params.study_id}'"
+        if (study_id == null) {
+            log.info "Missing study_id '${study_id}'"
             exit 1
         }
-        if (params.tss_file == null || !file(params.tss_file).exists()) {
-            log.info "Missing or invalid tss_file '${params.tss_file}'"
+        if (tss_file == null || !file(tss_file).exists()) {
+            log.info "Missing or invalid tss_file '${tss_file}'"
             exit 1
         }
-        if (params.cell_types == null || !file(params.cell_types).exists()) {
-            log.info "Missing or invalid cell_types '${params.cell_types}'"
-            exit 1
-        }
-        if (!file(params.vcf_files_1000G).exists()) {
-            log.info "directory not found: '${params.vcf_files_1000G}'"
+        if (cell_types == null || !file(cell_types).exists()) {
+            log.info "Missing or invalid cell_types '${cell_types}'"
             exit 1
         }
 
 
         // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
 
-        // define the input channels (value channels)
-        study_id = "${params.study_id}"  // the study ID (either name of a parquet file or a custom ID if gwas_path is provided)
-        gwas_path = file("${params.gwas_path}")  // the path to the GWAS file (optional, may be skipped if study_id is the name of a parquet file)
-        gwas_path_tbi = file("${params.gwas_path}.tbi")
-        parquet_path = file("${params.parquet_path}")
-        tss_file = file("${params.tss_file}")  // the path to the file with transcription start sites and mean expression of genes
-        cell_types = file("${params.cell_types}")  // the path to the cell type file; TODO: simplify, the file is only used for the header
-        atac_file = file("${params.atac_file}")  // the path to the ATAC file (optional)
-        atac_file_tbi = file("${params.atac_file}.tbi")
-        broad_fine_mapping = file("${params.broad_fine_mapping}")  // the path to the broad fine mapping file; TODO: make optional
-        gene_chunk_size = "${params.gene_chunk_size}"  // the number of genes to use per chunk / parallel job
+        gwas_path_tbi = file("${gwas_path}.tbi")
+        atac_file_tbi = file("${atac_file}.tbi")
 
-        // derive the job indices for parallel execution (queue channels)
-        nrow = file("${params.cell_types}").readLines().size() 
-        ncol = file("${params.cell_types}").withReader{it.readLine().split("\t")}.size()
+        // get job indices so that all rows of the tss file are processed in chunks of size gene_chunk_size
+        nrow = file("${cell_types}").readLines().size() 
+        job_indices_ngene = Channel.from(1..((nrow - 1).intdiv(gene_chunk_size) + 1))
 
-        job_indices_ngene = Channel.from(1..((nrow - 1).intdiv(params.gene_chunk_size) + 1))  // get job indices so that all rows of the tss file are processed in chunks of size gene_chunk_size
-        job_indices_ncell = Channel.from(1..(ncol - 3))  // get job indices so that all columns (tab separated) of the tss file are processed one at a time
-
-
-        print tss_file
-        print nrow
-        print ncol
+        // get job indices so that all columns (tab separated) of the tss file are processed one at a time
+        ncol = file("${cell_types}").withReader{it.readLine().split("\t")}.size()
+        job_indices_ncell = Channel.from(1..(ncol - 3))
 
 
         // ----------------- RUN THE WORKFLOW ----------------- //
@@ -167,13 +210,46 @@ workflow {
         ldsc_results = run_LDSC(tss_file, study_id, atac_file, atac_file_tbi, gwas_path, gwas_path_tbi, parquet_path, job_indices_ngene, gene_chunk_size)
 
         // 2) collect the results of all LDSC runs
-        collected_results = collect_LDSC(tss_file, ldsc_results.collect(), gene_chunk_size)
+        collected_results = collect_LDSC(study_id, tss_file, ldsc_results.collect(), gene_chunk_size)
 
         // 3) run HM on the collected results for all cell types
         hm_results = run_HM(study_id, atac_file, atac_file_tbi, cell_types, tss_file, broad_fine_mapping, collected_results, job_indices_ncell)
 
         // 4) plot the forest plot
-        plot_forest(hm_results.collect(), cell_types, tss_file)
+        plot_forest(study_id, hm_results.collect(), cell_types, tss_file)
+
+}
+
+workflow {
+    main:
+        // ----------------- CHECK FOR REQUIRED INPUTS ----------------- //
+        if (params.studies == null || !file(params.studies).exists()) {
+            log.info "Missing studies file: '${params.studies}'"
+            exit 1
+        }
+        if (!file(params.vcf_files_1000G).exists()) {
+            log.info "directory not found: '${params.vcf_files_1000G}'"
+            exit 1
+        }
+
+        // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
+
+        // define the input channels (value channels)
+        tss_file = file("${params.tss_file}")  // the path to the file with transcription start sites and mean expression of genes
+        cell_types = file("${params.cell_types}")  // the path to the cell type file; TODO: simplify, the file is only used for the header
+        atac_file = file("${params.atac_file}")  // the path to the ATAC file (optional)
+        broad_fine_mapping = file("${params.broad_fine_mapping}")  // the path to the broad fine mapping file; TODO: make optional
+        gene_chunk_size = "${params.gene_chunk_size}"  // the number of genes to use per chunk / parallel job
+
+        // split the studies file into individual studies
+        study_data = split_studies(params.studies)
+        study_id = study_data.map{it[0]}
+        gwas_path = study_data.map{it[1]}
+        parquet_path = study_data.map{it[2]}
+
+        // ----------------- RUN THE WORKFLOW ----------------- //
+
+        fgwas(tss_file, cell_types, gwas_path, parquet_path, atac_file, broad_fine_mapping, gene_chunk_size, study_id)
 }
 
 output {
