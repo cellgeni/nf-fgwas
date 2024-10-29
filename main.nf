@@ -147,17 +147,19 @@ workflow fgwas {
 
         // 0) fetch the irods archive if no other path is given
         fetch_studies = study_data.map{ it -> 
-                if (file(it[1]).name == "NO_GWAS_FILE" && file(it[3]).name == "NO_PRQT_FILE") {
-                        it[0]
-                }
-        }
+            if (file(it[1]).name == "NO_GWAS_FILE" && file(it[3]).name == "NO_PRQT_FILE") {
+                it[0]
+            } else {
+                null
+            }
+        }.filter{ it -> it != null }
         parquet_files = fetch_irods(fetch_studies)
-        study_data = study_data.join(parquet_files, remainder: true).map{ it -> 
-                if (it[4]) == null) {
-                        tuple(it[0], it[1], it[2], it[3])
-                } else {
-                        tuple(it[0], it[1], it[2], it[4])
-                }
+        study_data = study_data.join(parquet_files, remainder: true).map{ it ->
+            if (it[4] == null) {
+                tuple(it[0], it[1], it[2], it[3])
+            } else {
+                tuple(it[0], it[1], it[2], it[4])
+            }
         }
 
         // 1) run LDSC for each chunk of genes
@@ -171,7 +173,6 @@ workflow fgwas {
 
         // 4) plot the forest plot
         plot_forest(hm_results.groupTuple(), cell_types, tss_file)
-
 }
 
 workflow {
