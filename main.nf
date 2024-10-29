@@ -135,23 +135,6 @@ workflow fgwas {
         study_id
 
     main:
-        // ----------------- CHECK FOR REQUIRED INPUTS ----------------- //
-        if (study_id == null) {
-            log.error "Missing study_id '${study_id}'"
-            exit 1
-        }
-        if (tss_file == null || !file(tss_file).exists()) {
-            log.error "Missing or invalid tss_file '${tss_file}'"
-            exit 1
-        }
-        if (cell_types == null || !file(cell_types).exists()) {
-            log.error "Missing or invalid cell_types '${cell_types}'"
-            exit 1
-        }
-
-        log.debug "study ID: ${study_id}"
-        log.debug "gene chunk size: ${gene_chunk_size}"
-
         // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
 
         gwas_path_tbi = file("${gwas_path}.tbi")
@@ -170,10 +153,16 @@ workflow fgwas {
 
         // ----------------- RUN THE WORKFLOW ----------------- //
 
-        // 0) fetch the irods archive
-        if (file("${gwas_path}").name == "NO_GWAS_FILE" && file("${parquet_path}").name == "NO_PRQT_FILE") {
-            parquet_path = fetch_irods(study_id)
-        }
+        // 0) fetch the irods archive if no other path is given
+        parquet_path = Channel
+            .zip(gwas_path, parquet_path)
+            .map { gwas, parquet ->
+                if (file(gwas).name == "NO_GWAS_FILE" && file(parquet).name == "NO_PRQT_FILE") {
+                    fetch_irods(study_id)
+                } else {
+                    parquet
+                }
+            }
 
         // 1) run LDSC for each chunk of genes
         ldsc_results = run_LDSC(tss_file, study_id, atac_file, atac_file_tbi, gwas_path, gwas_path_tbi, parquet_path, job_indices_ngene, gene_chunk_size)
@@ -200,6 +189,14 @@ workflow {
             log.error "directory not found: '${params.vcf_files_1000G}'"
             exit 1
         }
+        if (params.tss_file == null || !file(params.tss_file).exists()) {
+            log.error "Missing or invalid tss_file '${params.tss_file}'"
+            exit 1
+        }
+        if (params.cell_types == null || !file(params.cell_types).exists()) {
+            log.error "Missing or invalid cell_types '${params.cell_types}'"
+            exit 1
+        }
 
         // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
 
@@ -215,6 +212,11 @@ workflow {
         study_id = study_data.map{it.study_id}
         gwas_path = study_data.map{it.gwas_path}
         parquet_path = study_data.map{it.parquet_path}
+
+        study_id.tap().collect().view {list -> log.debug "study_id: ${list}"}
+        gwas_path.tap().collect().view {list -> log.debug "gwas_path: ${list}"}
+        parquet_path.tap().collect().view {list -> log.debug "parquet_path: ${list}"}
+        log.debug "gene chunk size: ${gene_chunk_size}"
 
         // ----------------- RUN THE WORKFLOW ----------------- //
 
