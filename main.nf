@@ -9,7 +9,7 @@ process fetch_irods {
         val(study_id)
 
     output:
-        tuple(val(study_id), path("${study_id}.parquet")), emit: parquet_file
+        tuple(val(study_id), path("${study_id}.parquet"))
 
     shell:
         '''
@@ -42,7 +42,7 @@ process run_LDSC {
         tuple(val(study_id),path(gwas_path),path(gwas_path_tbi),path(parquet_path))
   
     output:
-        tuple(val(study_id), path("res${job_index}.gz")), emit: res
+        tuple val(study_id), path("res${job_index}.gz"), emit: res
 
     publish:
         res >> null
@@ -63,14 +63,16 @@ process collect_LDSC {
         val(gene_chunk_size)
 
     output:
-        tuple(val(study_id), path("input.gz")), emit: res
+        tuple val(study_id), path("$study_id/input.gz"), emit: res
 
     publish:
-        res[1] >> "$study_id/LDSC_results/"
+        res >> "LDSC_results/"
 
     script:
         """
         ${projectDir}/bin/collect.sh ${result_files} --without-mhc --ngene ${gene_chunk_size}
+        mkdir $study_id
+        mv input.gz $study_id/
         """
 }
 
@@ -85,15 +87,17 @@ process run_HM {
         val(job_index)
 
     output:
-        tuple(val(study_id), path("Out${job_index}")), emit: res
+        tuple val(study_id), path("$study_id/Out${job_index}"), emit: res
 
     publish:
-        res[1] >> "$study_id/HM_results/"
+        res >> "HM_results/"
 
     script:
         def use_atac_file = atac_file.name != "NO_ATAC_FILE" ? "--atac ${atac_file}" : ""
         """
         ${projectDir}/bin/runHM.sh "${study_id}" ${use_atac_file} --ldscinput input.gz --jobindex "${job_index}"
+        mkdir $study_id
+        mv Out* $study_id/
         """
 }
 
@@ -104,16 +108,18 @@ process plot_forest {
         path("tss_cell_type_exp.txt.gz")
 
     output:
-        path("forest_plot.pdf"), emit: forest_plot
-        path("enrichment.tsv"), emit: enrichment
+        path("$study_id/forest_plot.pdf"), emit: forest_plot
+        path("$study_id/enrichment.tsv"), emit: enrichment
 
     publish:
-        forest_plot >> "$study_id/enrichment/"
-        enrichment >> "$study_id/enrichment/"
+        forest_plot >> "enrichment/"
+        enrichment >> "enrichment/"
 
     script:
         """
         ${projectDir}/bin/makeForest.R --vanilla ${result_files}
+        mkdir $study_id
+        mv forest_plot.pdf enrichment.tsv $study_id/
         """
 }
 
