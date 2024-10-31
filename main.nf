@@ -28,7 +28,7 @@ process split_studies {
 
     script:
         """
-        ${projectDir}/bin/cleanup_inputs.sh "${studies}"
+        ${projectDir}/bin/make_input_csv.sh "${studies}" "$projectDir"
         """
 }
 
@@ -37,7 +37,7 @@ process run_LDSC {
         path("tss_cell_type_exp.txt.gz")
         path(atac_file)
         path(atac_file_tbi)
-        val(job_index)
+        each job_index
         val(gene_chunk_size)
         tuple(val(study_id),path(gwas_path),path(gwas_path_tbi),path(parquet_path))
   
@@ -52,6 +52,7 @@ process run_LDSC {
         def use_gwas_path = gwas_path.name != "NO_GWAS_FILE" ? "--gwas ${gwas_path}" : ""
         def use_parquet_path = parquet_path.name != "NO_PRQT_FILE" ? "--parquetfile ${parquet_path}" : ""
         """
+        read_parquet () { "${projectDir}/bin/read_parquet.py" "\$@"; } && export -f read_parquet
         ${projectDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} ${use_parquet_path} --jobindex "${job_index}" --vcffilesdir "${params.vcf_files_1000G}" --ngene "${gene_chunk_size}"
         """
 }
@@ -84,7 +85,7 @@ process run_HM {
         path("tss_cell_type_exp.txt.gz")
         path("broad_fine_mapping.tsv")
         tuple(val(study_id), path("input.gz"))
-        val(job_index)
+        each job_index
 
     output:
         tuple val(study_id), path("$study_id/Out${job_index}"), emit: res
