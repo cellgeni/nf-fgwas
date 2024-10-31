@@ -1,6 +1,7 @@
 #!/bin/bash
 
 studies="$1"
+projectDir="$2"
 
 echo "study_id,gwas_path,parquet_path" > output.csv
 

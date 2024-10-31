@@ -254,7 +254,7 @@ do
 				}' | gzip > $FGWAS
 	elif [ -z "$IS_COVID" ]; then
 		# fetch from parquet file;  old dir: /lustre/scratch117/cellgen/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet; /warehouse/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet
-		python read_parquet.py "$PARQUET_FILE" \
+		read_parquet "$PARQUET_FILE" \
 			$REG | awk -v ID=$I -v TSS=$TSS '
 				BEGIN{FS="\t";OFS="\t"}
 				NR>1{
