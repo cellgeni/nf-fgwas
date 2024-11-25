@@ -41,15 +41,14 @@ iinit
 
 ### GWAS studies
 
-GWAS studies are supplied via a `studies.csv` file that contains IDs and paths to multiple files with summary statistics, one study per row.
-Empty rows and lines starting with "#" will be ignored. 
+A list of GWAS studies is supplied via a `studies.csv` file. It should contain IDs and paths to multiple summary statistics files, one study per row.
 
-Each study needs an ID (to name results folders) and summary statistics can be supplied in three ways:
+Each study needs an ID (to name results folders) and summary statistics can be supplied in one of three ways:
 1. path to a custom `.bed.gz` file
 2. path to a `.parquet` file
-3. only the study ID, in this case iRODS will be used to fetch a file called `<studyID>.parquet` from the Sanger farm
+3. only the study ID, in this case iRODS will be used to fetch a corresponding file called `<studyID>.parquet` from the Sanger farm (Sanger only)
 
-The `studies.csv` file could look like this:
+The `studies.csv` file could look like this (Empty rows and lines starting with "#" will be ignored):
 
 ```
 # fetch these studies from the farm
@@ -89,8 +88,12 @@ The script contains some checks to test the required values are present, as well
 
 ### RNA data
 
-Average RNA counts per cell type need to be supplied as a TSV file:
+Average RNA counts per cell type need to be supplied as a TSV file. 
 
+**Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
+See `bin/prepare_input.py tss --help` for more details.
+
+The TSV file should be:
 - a file called `tss_cell_type_exp.txt.gz` (tab separated and gzipped) with one row per gene and:
   - 1st column: chromosome number
   - 2nd column: chromosome position
@@ -99,15 +102,15 @@ Average RNA counts per cell type need to be supplied as a TSV file:
   - sorted ascending by first two columns
   - no header
 
-Currently, in addition to the gzipped file, the unzipped version including a header needs to be supplied (`--cell_types`).
-This is only to provide the cell type names and will be simplified in the future.
-
-**Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
-See `bin/prepare_input.py tss --help` for more details.
+*(Currently, in addition to the gzipped file, the unzipped version including a header needs to be supplied (`--cell_types`).
+This is only to provide the cell type names and will be simplified in the future.)*
 
 ### ATAC data (optional)
 
-Optionally for including ATAC data:
+Optionally for including ATAC data another BED file needs to be supplied.
+
+**Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
+See `bin/prepare_input.py atac --help` for more details.
 
 - a file ending .bed.gz (`bgzip` compressed and `tabix` indexed) that contains
   - first column: chromosome position
@@ -127,5 +130,3 @@ epithelial    Club
 ```
 (note: cell type annotations can also be identical, e.g. if RNA/ATAC comes from the same cells)
 
-**Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
-See `bin/prepare_input.py atac --help` for more details.
