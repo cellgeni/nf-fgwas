@@ -44,9 +44,6 @@ process run_LDSC {
     output:
         tuple val(study_id), path("res${job_index}.gz"), emit: res
 
-    publish:
-        res >> null
-  
     script:
         def use_atac_file = atac_file.name != "NO_ATAC_FILE" ? "${atac_file}" : ""
         def use_gwas_path = gwas_path.name != "NO_GWAS_FILE" ? "--gwas ${gwas_path}" : ""
@@ -58,6 +55,8 @@ process run_LDSC {
 }
 
 process collect_LDSC {
+    publishDir "results/LDSC_results", mode: "copy"
+
     input:
         path("tss_cell_type_exp.txt.gz")
         tuple(val(study_id), path(result_files))
@@ -65,9 +64,6 @@ process collect_LDSC {
 
     output:
         tuple val(study_id), path("$study_id/input.gz"), emit: res
-
-    publish:
-        res >> "LDSC_results/"
 
     script:
         """
@@ -78,6 +74,8 @@ process collect_LDSC {
 }
 
 process run_HM {
+    publishDir "results/HM_results", mode: "copy"
+
     input:
         path(atac_file)
         path(atac_file_tbi)
@@ -90,9 +88,6 @@ process run_HM {
     output:
         tuple val(study_id), path("$study_id/Out${job_index}"), emit: res
 
-    publish:
-        res >> "HM_results/"
-
     script:
         def use_atac_file = atac_file.name != "NO_ATAC_FILE" ? "--atac ${atac_file}" : ""
         """
@@ -103,6 +98,8 @@ process run_HM {
 }
 
 process plot_forest {
+    publishDir "results/enrichment", mode: "copy"
+
     input:
         tuple(val(study_id), path(result_files))
         path("tss_cell_type_exp.txt")
@@ -111,10 +108,6 @@ process plot_forest {
     output:
         path("$study_id/forest_plot.pdf"), emit: forest_plot
         path("$study_id/enrichment.tsv"), emit: enrichment
-
-    publish:
-        forest_plot >> "enrichment/"
-        enrichment >> "enrichment/"
 
     script:
         """
@@ -224,9 +217,3 @@ workflow {
         fgwas(tss_file, cell_types, atac_file, broad_fine_mapping, gene_chunk_size, study_data)
 }
 
-output {
-    directory 'results'
-    enabled true
-    mode 'copy'
-    overwrite true
-}
