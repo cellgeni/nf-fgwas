@@ -135,12 +135,14 @@ workflow fgwas {
         // get job indices so that all rows of the tss file are processed in chunks of size gene_chunk_size
         nrow = file("${cell_types}").readLines().size() 
         log.debug "nrow: ${nrow}"
-        job_indices_ngene = Channel.from(1..((nrow - 1).intdiv(gene_chunk_size.toInteger()) + 1))
+        nchunk = ((nrow - 1).intdiv(gene_chunk_size.toInteger()) + 1)
+        job_indices_ngene = Channel.from(1..nchunk)
 
         // get job indices so that all columns (tab separated) of the tss file are processed one at a time
         ncol = file("${cell_types}").withReader{it.readLine().split("\t")}.size()
+        ncelltype = (ncol - 3)
         log.debug "ncol: ${ncol}"
-        job_indices_ncell = Channel.from(1..(ncol - 3))
+        job_indices_ncell = Channel.from(1..ncelltype)
 
 
         // ----------------- RUN THE WORKFLOW ----------------- //
@@ -166,13 +168,13 @@ workflow fgwas {
         ldsc_results = run_LDSC(tss_file, atac_file, atac_file_tbi, job_indices_ngene, gene_chunk_size, study_data)
 
         // 2) collect the results of all LDSC runs
-        collected_results = collect_LDSC(tss_file, ldsc_results.groupTuple(), gene_chunk_size)
+        collected_results = collect_LDSC(tss_file, ldsc_results.groupTuple(size: nchunk), gene_chunk_size)
 
         // 3) run HM on the collected results for all cell types
         hm_results = run_HM(atac_file, atac_file_tbi, cell_types, tss_file, broad_fine_mapping, collected_results, job_indices_ncell)
 
         // 4) plot the forest plot
-        plot_forest(hm_results.groupTuple(), cell_types, tss_file)
+        plot_forest(hm_results.groupTuple(size: ncelltype), cell_types, tss_file)
 }
 
 workflow {
