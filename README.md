@@ -7,9 +7,9 @@ It requires full GWAS summary statistics, including logOR and standard error.
 ## run
 
 ```bash
-# load modules
-module load cellgen/nextflow
-module load cellgen/singularity
+# load modules (or provide nextflow and singularity differently)
+module load cellgen/nextflow  # internal module with singularity-ce version 4.1.0
+module load cellgen/singularity  # internal module with nextflow version 24.10.2
 
 # make a new directory for the results
 mkdir make/new/directory
@@ -30,7 +30,7 @@ Alternatively, copy and edit `nextflow.config`, then execute
 nextflow -C nextflow.config run /path/to/nf-fgwas/main.nf
 ```
 
-**Note:** if you want to use summary statistics stored on iRODS (Sanger), also run this before starting the pipeline and enter your password:
+> **Note:** if you want to use summary statistics stored on iRODS (**Sanger internal only**), run this before starting the pipeline and enter your password:
 
 ```bash
 module load cellgen/irods
@@ -46,7 +46,7 @@ A list of GWAS studies is supplied via a `studies.csv` file. It should contain I
 Each study needs an ID (to name results folders) and summary statistics can be supplied in one of three ways:
 1. path to a custom `.bed.gz` file
 2. path to a `.parquet` file
-3. only the study ID, in this case iRODS will be used to fetch a corresponding file called `<studyID>.parquet` from the Sanger farm (Sanger only)
+3. only the study ID, in this case iRODS will be used to fetch a corresponding file called `<studyID>.parquet` from the Sanger farm (**Sanger internal only**)
 
 The `studies.csv` file could look like this (Empty rows and lines starting with "#" will be ignored):
 
@@ -81,7 +81,7 @@ Further, the files need to be transformed into BED format with these columns:
 Finally, the BED file needs to be compressed in block format using `bgzip` and indexed using `tabix`.
 The index file `<file_name>.bed.gz.tbi` is expected to be in the same folder as `<file_name>.bed.gz`.
 
-**Note: a script is available in `bin/check_summ_stat.py` to help prepare custom files.**
+> **Note: a script is available in `bin/check_summ_stat.py` to help prepare custom files.**
 See `bin/check_summ_stat.py --help` for more details.
 Often summary statistics provided for different studies do not contain all required values or the columns are labelled incorrectly.
 The script contains some checks to test the required values are present, as well as potentially converts them is other values are present that allow calculating the ones that are required (beta and standard error).
@@ -90,7 +90,7 @@ The script contains some checks to test the required values are present, as well
 
 Average RNA counts per cell type need to be supplied as a TSV file. 
 
-**Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
+> **Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
 See `bin/prepare_input.py tss --help` for more details.
 
 The TSV file should be:
@@ -109,7 +109,7 @@ This is only to provide the cell type names and will be simplified in the future
 
 Optionally for including ATAC data another BED file needs to be supplied.
 
-**Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
+> **Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
 See `bin/prepare_input.py atac --help` for more details.
 
 - a file ending .bed.gz (`bgzip` compressed and `tabix` indexed) that contains
