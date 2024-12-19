@@ -26,6 +26,10 @@ do
 		# path to a custom tabix indexed .tsv.gz file given
 		echo "$study,$path,$projectDir/assets/NO_PRQT_FILE" >> output.csv
 		;;
+	    *.bed.gz)
+		# path to a custom tabix indexed .bed.gz file given
+		echo "$study,$path,$projectDir/assets/NO_PRQT_FILE" >> output.csv
+		;;
 	    *)
 		echo "Error: Unrecognized file type for study $study with path $path" >&2
 		exit 1
