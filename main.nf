@@ -68,6 +68,8 @@ process collect_LDSC {
     script:
         """
         ${projectDir}/bin/collect.sh ${result_files} --without-mhc --ngene ${gene_chunk_size}
+        zcat input.gz | sort -k1 -n -t\$'\t' -o input.txt
+        cat input.txt | gzip > input.gz && rm input.txt
         mkdir $study_id
         mv input.gz $study_id/
         """
