@@ -134,10 +134,11 @@ epithelial    Club
 
 A path to VCF files is set in `nextflow.config`, which is currently hard coded (Sanger HPC).
 These are files used for calculating linkage disequilibrium scores and can be downloaded from the 1000 Genomes project website or FTP server.
+
 Usually, the files will have to be filtered for samples of a fitting ancestry, biallelic SNVs, and minor allele frequency >0.001.
 In addition, the genome assembly (e.g. GRCh38) should also match with the summary statistics and TSS file.
 
-Up-to-date (as of 2025-01-20) can be found [here](https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/) 
-with [ancestry information](ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped).
+Up-to-date (as of 2025-01-20) can be found [here](https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/).
+Fitting ancestry information: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
 
 
