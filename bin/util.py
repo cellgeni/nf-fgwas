@@ -121,12 +121,17 @@ def get_accessibility_by_annot(
     return bin_acc_df
 
 
-def get_tss_df(host=None):
+@add_logger
+def get_tss_df(host=None, log=logging.getLogger()):
     host = host or 'http://www.ensembl.org'
+    log.info(f"using host: '{host}'")
+
     # load biomart dataset
     server = Server(host=host)
     mart = server['ENSEMBL_MART_ENSEMBL']
     dataset = mart['hsapiens_gene_ensembl']
+
+    log.info(f"getting TSS locations for: '{mart.display_name}', '{dataset.display_name}'")
     
     # extract data frame
     def select_tss(df):

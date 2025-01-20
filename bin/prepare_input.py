@@ -184,6 +184,7 @@ def main():
     tss_parser = subparsers.add_parser('tss', help='Make TSS file')
     tss_parser.add_argument('--h5ad_path', '-i', required=True, help='Path to the h5ad file with RNA data (lognorm)')
     tss_parser.add_argument('--groupby', '-g', required=True, help='Group by column name (in AnnData.obs)')
+    tss_parser.add_argument('--host', '-h', default='http://www.ensembl.org', help='ensembl URL to retrieve TSS information from. E.g. set "http://grch37.ensembl.org/" for "GRCh37.p13" or "http://jul2023.archive.ensembl.org" for "GRCh38.p14".')
     tss_parser.add_argument('--output_path', '-o', default="tss_cell_type_exp.txt", help='Output file path (TSV) or folder')
     tss_parser.set_defaults(command='tss')
 
@@ -211,6 +212,7 @@ def main():
         make_tss_file(
             h5ad_path=args.h5ad_path,
             groupby=args.groupby,
+            host=args.host,
             output_path=args.output_path,
         )
     elif args.command == 'atac':
