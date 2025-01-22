@@ -141,4 +141,16 @@ In addition, the genome assembly (e.g. GRCh38) should also match with the summar
 Up-to-date (as of 2025-01-20) can be found [here](https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/).
 Fitting ancestry information: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
 
+## Citations
 
+**theoretical framework**
+
+> Pickrell, 2014, AJHG, https://doi.org/10.1016/j.ajhg.2014.03.004
+
+**adaption for single cell data**
+
+> Elmentaite et al., 2021, Nature, https://doi.org/10.1038/s41586-021-03852-1
+
+**nextflow pipeline and inclusion of scATAC**
+
+> To, Fei, Pett et al., 2024, Nature, https://doi.org/10.1038/s41586-024-08189-z
