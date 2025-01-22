@@ -55,7 +55,7 @@ process run_LDSC {
 }
 
 process collect_LDSC {
-    publishDir "results/LDSC_results", mode: "copy"
+    publishDir "${params.results}/LDSC_results", mode: "copy"
 
     input:
         path("tss_cell_type_exp.txt.gz")
@@ -76,7 +76,7 @@ process collect_LDSC {
 }
 
 process run_HM {
-    publishDir "results/HM_results", mode: "copy"
+    publishDir "${params.results}/HM_results", mode: "copy"
 
     input:
         path(atac_file)
@@ -100,7 +100,7 @@ process run_HM {
 }
 
 process plot_forest {
-    publishDir "results/enrichment", mode: "copy"
+    publishDir "${params.results}/enrichment", mode: "copy"
 
     input:
         tuple(val(study_id), path(result_files))
