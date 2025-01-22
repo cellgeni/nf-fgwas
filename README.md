@@ -135,11 +135,42 @@ epithelial    Club
 A path to VCF files is set in `nextflow.config`, which is currently hard coded (Sanger HPC).
 These are files used for calculating linkage disequilibrium scores and can be downloaded from the 1000 Genomes project website or FTP server.
 
+Up-to-date (as of 2025-01-20) VCF files can be found [here](https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/).
+Fitting ancestry information: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
+
 Usually, the files will have to be filtered for samples of a fitting ancestry, biallelic SNVs, and minor allele frequency >0.001.
 In addition, the genome assembly (e.g. GRCh38) should also match with the summary statistics and TSS file.
 
-Up-to-date (as of 2025-01-20) can be found [here](https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/).
-Fitting ancestry information: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
+Filtering the files can be done, e.g. using bcftools:
+```bash
+WORK_DIR="1000G_filtered_data"
+VCF_URL_BASE="https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV"
+PED_FILE_URL="ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped"
+POP="EUR"  # European ancestry
+
+mkdir -p ${WORK_DIR} && cd ${WORK_DIR}
+
+echo "Downloading PED file for population information..."
+wget -q ${PED_FILE_URL} -O 20130606_g1k.ped
+
+echo "Extracting sample IDs for selected ancestry (${POP})..."
+grep "${POP}" 20130606_g1k.ped | awk '{print $2}' > sel_samples.txt
+
+echo "Downloading and processing VCF files..."
+for CHROM in {1..22}; do
+    echo "    Processing chromosome ${CHROM}..."
+    VCF_FILE="CCDG_14151_B01_GRM_WGS_2020-08-05_chr${CHROM}.filtered.shapeit2-duohmm-phased.vcf.gz"
+    VCF_URL="${VCF_URL_BASE}/${VCF_FILE}"
+    wget -q ${VCF_URL} -O ${VCF_FILE}
+    
+    # Filter for European samples, biallelic SNVs, and MAF > 0.001
+    bcftools view -S sel_samples.txt -v snps -m2 -M2 ${VCF_FILE} | \
+        bcftools view --min-af 0.001 --output-type z --output-file chr${CHROM}_filtered.vcf.gz
+
+    # Index the filtered VCF file
+    bcftools index chr${CHROM}_filtered.vcf.gz
+done
+```
 
 ## Citations
 
