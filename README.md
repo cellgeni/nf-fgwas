@@ -37,6 +37,22 @@ module load cellgen/irods
 iinit
 ```
 
+### software requirements
+
+A `Dockerfile` is contained in the repository and an already built image can be downloaded from `quay.io`:
+
+```bash
+docker pull quay.io/cellgeni/nf-fgwas
+```
+
+To run it on an HPC cluster, might need to convert it to Singularity:
+
+```bash
+singularity build "nf-fgwas.sif" "docker-daemon://nf-fgwas:latest"
+```
+
+To make nextflow use the image, replace its path in the `nextflow.config` file.
+
 ## input files
 
 ### GWAS studies
