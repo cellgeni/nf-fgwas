@@ -62,7 +62,7 @@ RUN Rscript -e 'install.packages(c("tidyr","plyr","readr","dplyr","tibble","futi
     Rscript -e 'if (!require("BiocManager", quietly = TRUE)) install.packages("BiocManager"); BiocManager::install("qvalue")'
 
 # python packages
-RUN pip install --no-cache pandas pyarrow
+RUN pip install --no-cache numpy pandas pyarrow scanpy pybiomart
 
 # clapack
 ENV CLAPACK_VER="3.2.1"
