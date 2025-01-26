@@ -31,33 +31,46 @@ nextflow -C nextflow.config run /path/to/nf-fgwas/main.nf
 ```
 
 > **Note:** if you want to use summary statistics stored on iRODS (**Sanger internal only**), run this before starting the pipeline and enter your password:
+>```bash
+>module load cellgen/irods
+>iinit
+>```
 
-```bash
-module load cellgen/irods
-iinit
-```
+### installation
 
-### software requirements
+<details>
+<summary><b>show details</b></summary>
+<br />
 
-A `Dockerfile` is contained in the repository and an already built image can be downloaded from `quay.io`:
+`nextflow` needs to be installed to run the pipeline (obviously).
+We recommend `singularity` for providing the software dependencies on an HPC environment.
+A `singularity` image can be built via `docker` and a `Dockerfile` is contained in the repository.
+
+Additionally, an already built `docker` image can be downloaded from `quay.io`:
 
 ```bash
 docker pull quay.io/cellgeni/nf-fgwas
 ```
 
-To run it on an HPC cluster, might need to convert it to Singularity:
+And then converted to `singularity`:
 
 ```bash
 singularity build "nf-fgwas.sif" "docker-daemon://nf-fgwas:latest"
 ```
 
-To make nextflow use the image, replace its path in the `nextflow.config` file.
+To tell nextflow to use the image, replace its path in the `nextflow.config` file.
+
+</details>
 
 ## input files
 
 ### GWAS studies
 
 A list of GWAS studies is supplied via a `studies.csv` file. It should contain IDs and paths to multiple summary statistics files, one study per row.
+
+<details>
+<summary><b>show details</b></summary>
+<br />
 
 Each study needs an ID (to name results folders) and summary statistics can be supplied in one of three ways:
 1. path to a custom `.bed.gz` file
@@ -102,9 +115,15 @@ See `bin/check_summ_stat.py --help` for more details.
 Often summary statistics provided for different studies do not contain all required values or the columns are labelled incorrectly.
 The script contains some checks to test the required values are present, as well as potentially converts them is other values are present that allow calculating the ones that are required (beta and standard error).
 
+</details>
+
 ### RNA data
 
 Average RNA counts per cell type need to be supplied as a TSV file. 
+
+<details>
+<summary><b>show details</b></summary>
+<br />
 
 > **Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
 See `bin/prepare_input.py tss --help` for more details.
@@ -121,9 +140,15 @@ The TSV file should be:
 *(Currently, in addition to the gzipped file, the unzipped version including a header needs to be supplied (`--cell_types`).
 This is only to provide the cell type names and will be simplified in the future.)*
 
+</details>
+
 ### ATAC data (optional)
 
 Optionally for including ATAC data another BED file needs to be supplied.
+
+<details>
+<summary><b>show details</b></summary>
+<br />
 
 > **Note: a script is available in `bin/prepare_input.py` to help prepare this file from an AnnData object.**
 See `bin/prepare_input.py atac --help` for more details.
@@ -146,10 +171,16 @@ epithelial    Club
 ```
 (note: cell type annotations can also be identical, e.g. if RNA/ATAC comes from the same cells)
 
+</details>
+
 ### VCF files
 
 A path to VCF files is set in `nextflow.config`, which is currently hard coded (Sanger HPC).
 These are files used for calculating linkage disequilibrium scores and can be downloaded from the 1000 Genomes project website or FTP server.
+
+<details>
+<summary><b>show details</b></summary>
+<br />
 
 Up-to-date (as of 2025-01-20) VCF files can be found [here](https://ftp.1000genomes.ebi.ac.uk/vol1/ftp/data_collections/1000G_2504_high_coverage/working/20220422_3202_phased_SNV_INDEL_SV/).
 Fitting ancestry information: ftp://ftp.1000genomes.ebi.ac.uk/vol1/ftp/technical/working/20130606_sample_info/20130606_g1k.ped.
@@ -188,16 +219,20 @@ for CHROM in {1..22}; do
 done
 ```
 
+</details>
+
 ## Citations
 
-**theoretical framework**
+**this nextflow pipeline, inclusion of scATAC**
 
-> Pickrell, 2014, AJHG, https://doi.org/10.1016/j.ajhg.2014.03.004
+> To, Fei, Pett et al., 2024, Nature, https://doi.org/10.1038/s41586-024-08189-z
+
+background:
 
 **adaption for single cell data**
 
 > Elmentaite et al., 2021, Nature, https://doi.org/10.1038/s41586-021-03852-1
 
-**nextflow pipeline and inclusion of scATAC**
+**theoretical framework**
 
-> To, Fei, Pett et al., 2024, Nature, https://doi.org/10.1038/s41586-024-08189-z
+> Pickrell, 2014, AJHG, https://doi.org/10.1016/j.ajhg.2014.03.004
