@@ -175,8 +175,9 @@ epithelial    Club
 
 ### VCF files
 
-A path to VCF files is set in `nextflow.config`, which is currently hard coded (Sanger HPC).
+A path to VCF files is set in `nextflow.config`.
 These are files used for calculating linkage disequilibrium scores and can be downloaded from the 1000 Genomes project website or FTP server.
+(The default points to a path on Sanger HPC, replace if running from somewhere else, or other files are needed)
 
 <details>
 <summary><b>show details</b></summary>
