@@ -35,7 +35,7 @@ def check_adata(adata, scale_thr=0, lognorm_thr=20, filter_thr=10000, log=loggin
         else:
             log.error(f"AnnData check failed: '{error}' and No .raw attribute found.")
             if "Please provide log-transformed counts" in str(error):
-                log.warning("log-transforming the counts.")
+                log.warning("log-normalising the counts.")
                 sc.pp.normalize_total(adata)
                 sc.pp.log1p(adata)
             else:
@@ -46,7 +46,7 @@ def check_adata(adata, scale_thr=0, lognorm_thr=20, filter_thr=10000, log=loggin
 
 
 @add_logger
-def make_tss_file(h5ad_path, groupby, output_path=None, host="http://www.ensembl.org", log=logging.getLogger()):
+def make_tss_file(h5ad_path, groupby, output_path=None, host="http://www.ensembl.org", min_cells=200, log=logging.getLogger()):
     # collect parameters
     if output_path is None:
         output_path = "tss_cell_type_exp.txt"
@@ -62,7 +62,10 @@ def make_tss_file(h5ad_path, groupby, output_path=None, host="http://www.ensembl
     # Check the dataset
     log.info(f"test and process")
     ad = check_adata(ad)
-    sc.pp.filter_genes(ad, min_cells=200)
+    log.debug(f"cells x genes, before filtering: {ad.shape}")
+    sc.pp.filter_genes(ad, min_cells=min_cells)
+    log.debug(f"cells x genes, after filtering: {ad.shape}")
+    log.debug(ad)
 
     # Compute the average expression
     log.info(f"average counts by group '{groupby}'")
@@ -90,11 +93,13 @@ def make_tss_file(h5ad_path, groupby, output_path=None, host="http://www.ensembl
     out_df = out_df[out_df.chromosome.between(1, 22)]
     out_df = out_df.sort_values(["chromosome", "tss_loc"])
     out_df = out_df.drop_duplicates(["chromosome", "tss_loc"])
+    log.debug(f"shape after retaining only chromosomes 1-22: {out_df.shape}")
     
     # Save the output with gene names (for reference)
     output_path_gene_names = Path(output_path).parent / f"gene_names_{Path(output_path).name}"
     log.info(f"save tss file with gene names and symbols for reference: '{output_path_gene_names}'")
     out_df.columns = util.celltypes_to_ids(out_df.columns)
+    out_df = out_df[["gene_symbol", "gene_ensembl_id", "chromosome", "tss_loc"] + sorted(out_df.columns[4:].tolist())]
     out_df.to_csv(
         output_path_gene_names, 
         sep = "\t", 
@@ -170,6 +175,7 @@ def make_atac_file(h5ad_path, groupby, output_path=None, metadata=None, log=logg
     # Save the output
     log.info(f"save input file for fGWAS: '{output_path}'")
     bin_acc_df.columns = util.celltypes_to_ids(bin_acc_df.columns)
+    bin_acc_df = bin_acc_df[["chr", "start", "end"] + sorted(bin_acc_df.columns[3:].tolist())]
     bin_acc_df.to_csv(
         output_path, 
         sep = "\t", 
@@ -185,6 +191,7 @@ def main():
     tss_parser.add_argument('--h5ad_path', '-i', required=True, help='Path to the h5ad file with RNA data (lognorm)')
     tss_parser.add_argument('--groupby', '-g', required=True, help='Group by column name (in AnnData.obs)')
     tss_parser.add_argument('--host', '-u', default='http://www.ensembl.org', help='ensembl URL to retrieve TSS information from. E.g. set "http://grch37.ensembl.org/" for "GRCh37.p13" or "http://jul2023.archive.ensembl.org" for "GRCh38.p14".')
+    tss_parser.add_argument('--min-cells', '-c', default=200, type=int, help='filter genes to genes with counts in at least this many cells. (default 200)')
     tss_parser.add_argument('--output_path', '-o', default="tss_cell_type_exp.txt", help='Output file path (TSV) or folder')
     tss_parser.set_defaults(command='tss')
 
@@ -213,6 +220,7 @@ def main():
             h5ad_path=args.h5ad_path,
             groupby=args.groupby,
             host=args.host,
+            min_cells=args.min_cells,
             output_path=args.output_path,
         )
     elif args.command == 'atac':
