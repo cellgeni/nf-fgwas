@@ -5,6 +5,7 @@ VCF_FILES_DIR="/nfs/cellgeni/pipeline-files/1000G/20190312/European/"
 
 # The number of genes per job
 NGENE=100
+WSIZE=500000
 PARQUET_FILE=""
 
 PARAMS=""
@@ -65,6 +66,16 @@ do
 				exit 1
 			fi
 			;;
+		-w|--windowsize)
+			# set window size
+			if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
+				WSIZE="$2"
+				shift 2
+			else
+				echo "Error: Argument for $1 is missing" >&2
+				exit 1
+			fi
+			;;
 		-p|--parquetfile)
 			# set dir with parquet files
 			if [ -n "$2" ] && [ ${2:0:1} != "-" ]; then
@@ -115,12 +126,14 @@ fi
 if [ -z "$GWAS" ]
 then
 	printf -- "\nusage: getLDSC.sh STUDY [ATAC]\n\n"
-	printf -- "STUDY        ID of study\n"
-	printf -- "ATAC         tabix indexed bed file with values of 0/1\n"
-	printf -- "             for each celltype per peak region\n\n"
-	printf -- "-l, --list   list available study IDs and exit\n"
-	printf -- "-g, --gwas   path to tsv file with summary statistics\n\n"
-	printf -- "-n, --ngene  number of genes per chunk/batch\n\n"
+	printf -- "STUDY             ID of study\n"
+	printf -- "ATAC              tabix indexed bed file with values of 0/1\n"
+	printf -- "                  for each celltype per peak region\n\n"
+	printf -- "-l, --list        list available study IDs and exit\n"
+	printf -- "-g, --gwas        path to tsv file with summary statistics\n\n"
+	printf -- "-n, --ngene       number of genes per chunk/batch\n\n"
+	printf -- "-w, --windowsize  distance up and downstream of TSS to include\n"
+	printf -- "                  SNPs (default 500k, i.e. window of 1Mb)\n\n"
 	printf -- "jobs will be submitted to the cluster and flags\n"
 	printf -- "--covid and --jobindex added automatically.\n\n"
 	printf -- "If using a custom GWAS file, still set STUDY to\n"
@@ -210,14 +223,14 @@ FGWAS="FGWAS$JOBIND.gz" #$(mktemp --suffix .gz)
 for I in `seq $A $B`
 do
 	TSS=`zcat $GEX_INFILE | awk -v NROW=$I 'NR==NROW {print $2}'`
-	REG=`zcat $GEX_INFILE | awk -v NROW=$I '
+	REG=`zcat $GEX_INFILE | awk -v NROW=$I -v WIN=$WSIZE '
 		NR==NROW {
-			if($2<500000){
-				A=500001
+			if($2<WIN){
+				A=WIN+1
 			}else{
 				A=$2
 			}; 
-			print $1":"A-500000"-"$2+500000
+			print $1":"A-WIN"-"$2+WIN
 		}'`
 	CHR=${REG%*:*}
 
@@ -240,47 +253,32 @@ do
 		# columns 'hm_chrom' (1), 'hm_pos' (2+3), 'hm_other_allele' (4), 
 		# 'hm_effect_allele' (5), 'hm_beta' (6) and 'standard_error' (7)
 		tabix "$CUSTOM_GWAS" \
-			$REG | awk -v ID=$I -v TSS=$TSS '
+			$REG | awk -v ID=$I -v TSS=$TSS -v WIN=$WSIZE '
 				BEGIN{FS="\t";OFS="\t"}
 				{
 					r=0.1/(0.1+$7*$7);
 					bf=log(1-r)/2+($6/$7)*($6/$7)*r/2
 					if($2-TSS>0){
-						TSSP=($2-TSS)/500000
+						TSSP=($2-TSS)/WIN
 					}else{
-						TSSP=-($2-TSS)/500000
+						TSSP=-($2-TSS)/WIN
 					}
 					print ID,$1,$2,$4,$5,bf,TSSP*(-22.91),$1"_"$2
 				}' | gzip > $FGWAS
-	elif [ -z "$IS_COVID" ]; then
+	else
 		# fetch from parquet file;  old dir: /lustre/scratch117/cellgen/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet; /warehouse/cellgeni/otar-gwas-ss/gwas/$GWAS.parquet
 		read_parquet "$PARQUET_FILE" \
-			$REG | awk -v ID=$I -v TSS=$TSS '
+			$REG | awk -v ID=$I -v TSS=$TSS -v WIN=$WSIZE '
 				BEGIN{FS="\t";OFS="\t"}
 				NR>1{
 					r=0.1/(0.1+$11*$11);
 					bf=log(1-r)/2+($10/$11)*($10/$11)*r/2
 					if($7-TSS>0){
-						TSSP=($7-TSS)/500000
+						TSSP=($7-TSS)/WIN
 					}else{
-						TSSP=-($7-TSS)/500000
+						TSSP=-($7-TSS)/WIN
 					}
 					print ID,$6,$7,$8,$9,bf,TSSP*(-22.91),$6"_"$7
-				}' | gzip > $FGWAS
-	else
-		# process covid (not working anymore, path outdated)
-		tabix /nfs/users/nfs_n/nk5/sanger/GWAS/COVID19/Orig/$GWAS.txt.gz \
-			$REG | awk -v ID=$I -v TSS=$TSS '
-				BEGIN{FS="\t";OFS="\t"}
-				{
-					r=0.1/(0.1+$8*$8);
-					bf=log(1-r)/2+($7/$8)*($7/$8)*r/2
-					if($2-TSS>0){
-						TSSP=($2-TSS)/500000
-					}else{
-						TSSP=-($2-TSS)/500000
-					}
-					print ID,$1,$2,$3,$4,bf,TSSP*(-22.91),$1"_"$2
 				}' | gzip > $FGWAS
 	fi
 

@@ -50,7 +50,7 @@ process run_LDSC {
         def use_parquet_path = parquet_path.name != "NO_PRQT_FILE" ? "--parquetfile ${parquet_path}" : ""
         """
         read_parquet () { "${projectDir}/bin/read_parquet.py" "\$@"; } && export -f read_parquet
-        ${projectDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} ${use_parquet_path} --jobindex "${job_index}" --vcffilesdir "${params.vcf_files_1000G}" --ngene "${gene_chunk_size}"
+        ${projectDir}/bin/getLDSC.sh "${study_id}" "${use_atac_file}" "" ${use_gwas_path} ${use_parquet_path} --jobindex "${job_index}" --vcffilesdir "${params.vcf_files_1000G}" --windowsize "${params.window_size}" --ngene "${gene_chunk_size}"
         """
 }
 
@@ -172,11 +172,13 @@ workflow fgwas {
         // 2) collect the results of all LDSC runs
         collected_results = collect_LDSC(tss_file, ldsc_results.groupTuple(size: nchunk), gene_chunk_size)
 
-        // 3) run HM on the collected results for all cell types
-        hm_results = run_HM(atac_file, atac_file_tbi, cell_types, tss_file, broad_fine_mapping, collected_results, job_indices_ncell)
+        if (params.enrichment) {
+            // 3) run HM on the collected results for all cell types
+            hm_results = run_HM(atac_file, atac_file_tbi, cell_types, tss_file, broad_fine_mapping, collected_results, job_indices_ncell)
 
-        // 4) plot the forest plot
-        plot_forest(hm_results.groupTuple(size: ncelltype), cell_types, tss_file)
+            // 4) plot the forest plot
+            plot_forest(hm_results.groupTuple(size: ncelltype), cell_types, tss_file)
+        }
 }
 
 workflow {
