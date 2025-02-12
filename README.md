@@ -64,7 +64,7 @@ To tell nextflow to use the image, replace its path in the `nextflow.config` fil
 
 ## input files
 
-### GWAS studies
+### 1. GWAS studies
 
 A list of GWAS studies is supplied via a `studies.csv` file. It should contain IDs and paths to multiple summary statistics files, one study per row.
 
@@ -117,7 +117,7 @@ The script contains some checks to test the required values are present, as well
 
 </details>
 
-### RNA data
+### 2a. RNA data
 
 Average RNA counts per cell type need to be supplied as a TSV file. 
 
@@ -142,7 +142,7 @@ This is only to provide the cell type names and will be simplified in the future
 
 </details>
 
-### ATAC data (optional)
+### 2b. ATAC data (optional)
 
 Optionally for including ATAC data another BED file needs to be supplied.
 
@@ -173,7 +173,7 @@ epithelial    Club
 
 </details>
 
-### VCF files
+### 3. VCF files
 
 A path to VCF files is set in `nextflow.config`.
 These are files used for calculating linkage disequilibrium scores and can be downloaded from the 1000 Genomes project website or FTP server.
