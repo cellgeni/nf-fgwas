@@ -28,7 +28,7 @@ process split_studies {
 
     script:
         """
-        ${projectDir}/bin/make_input_csv.sh "${studies}" "$projectDir"
+        ${projectDir}/bin/make_input_csv.sh "${studies}" "$projectDir" "$launchDir"
         """
 }
 

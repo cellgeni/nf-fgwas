@@ -2,6 +2,7 @@
 
 studies="$1"
 projectDir="$2"
+launchDir="$3"
 
 echo "study_id,gwas_path,parquet_path" > output.csv
 
@@ -24,10 +25,14 @@ do
 		;;
 	    *.tsv.gz)
 		# path to a custom tabix indexed .tsv.gz file given
+		case "$path" in (/*) path_tbi="$path.tbi";; (*) path_tbi="$launchDir/$path.tbi";; esac
+		if [ ! -e "$path_tbi" ]; then echo "Error: no tabix index file ($path_tbi) found."; exit 1; fi
 		echo "$study,$path,$projectDir/assets/NO_PRQT_FILE" >> output.csv
 		;;
 	    *.bed.gz)
 		# path to a custom tabix indexed .bed.gz file given
+		case "$path" in (/*) path_tbi="$path.tbi";; (*) path_tbi="$launchDir/$path.tbi";; esac
+		if [ ! -e "$path_tbi" ]; then echo "Error: no tabix index file ($path_tbi) found."; exit 1; fi
 		echo "$study,$path,$projectDir/assets/NO_PRQT_FILE" >> output.csv
 		;;
 	    *)
