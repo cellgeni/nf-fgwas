@@ -204,6 +204,7 @@ workflow {
         // ----------------- DEFINE THE INPUT CHANNELS ----------------- //
 
         // define the input channels (value channels)
+        studies = file("${params.studies}")  // the path to the file with summary statistics
         tss_file = file("${params.tss_file}")  // the path to the file with transcription start sites and mean expression of genes
         cell_types = file("${params.cell_types}")  // the path to the cell type file; TODO: simplify, the file is only used for the header
         atac_file = file("${params.atac_file}")  // the path to the ATAC file (optional)
@@ -211,8 +212,8 @@ workflow {
         gene_chunk_size = "${params.gene_chunk_size}"  // the number of genes to use per chunk / parallel job
 
         // split the studies file into individual studies
-        study_data = split_studies(params.studies).splitCsv(header: true)
-        study_data = study_data.map{it -> tuple(it.study_id, it.gwas_path, it.parquet_path)}
+        study_data = split_studies(studies).splitCsv(header: true)
+        study_data = study_data.map{it -> tuple(it.study_id, file(it.gwas_path), file(it.parquet_path))}
 
         study_data.tap{ study_data_tap }
         study_data_tap.view {it -> log.debug "studies: ${it}"}
