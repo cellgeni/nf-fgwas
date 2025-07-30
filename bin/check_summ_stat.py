@@ -166,17 +166,20 @@ def format_summ_stats(df, chain_file=None, log=logging.getLogger()):
             # TODO: untested
             log.info(f"lifting over coordinates using chain file: '{chain_file}'")
             with tempfile.TemporaryDirectory() as tmp_dir:
-                file_path = Path(tmp_dir) / "summ_stat.tsv"
+                tmp_dir_path = Path(tmp_dir)
+                file_path = tmp_dir_path / "summ_stat.tsv"
                 df.to_csv(file_path, sep="\t", index=False, na_rep="NA")
+                cols = df.columns
                 
                 try:
-                    os.system(f'CrossMap.py bed "{chain_file}" "{file_path}" "${file_path}_tmp')
+                    os.system(f'CrossMap bed "{chain_file}" "{file_path}" "{tmp_dir_path}/tmp.tsv"')
                 except Error as e:
                     log.error(e)
                     log.error("is CrossMap.py installed? to install run e.g. `mamba install crossmap`")
                     raise e
-                os.system(f'mv "${file_path}_tmp" "${file_path}"')
-                df = pd.read_csv(file_path, sep="\t")
+                os.system(f'mv "{tmp_dir_path}/tmp.tsv" "{file_path}"')
+                df = pd.read_csv(file_path, sep="\t", header=None)
+                df.columns = cols
                 log.debug(df.head())
 
         log.info("keeping only chromosomes 1-22.")
